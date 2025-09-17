@@ -4,18 +4,28 @@
   "description": "A simple application to manage todo items using SQLite and JavaScript.",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "docker:build": "docker build -t gymcloud-backend .",
+    "docker:start": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
+    "@clerk/express": "^1.7.31",
     "@prisma/client": "^6.16.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^4.17.1",
     "jsonwebtoken": "^9.0.2",
-    "sqlite3": "^5.0.0"
+    "sqlite3": "^5.0.0",
+    "svix": "^1.76.1"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "nodemon": "^3.1.10",
     "prisma": "^6.16.0"
-  }
+  },
+  "type": "module"
 }
