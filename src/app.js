@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { clerkMiddleware } from '@clerk/express';
+import { clerkClient, clerkMiddleware } from '@clerk/express';
 import { verifyWebhook } from '@clerk/express/webhooks'
+
 
 dotenv.config();
 
@@ -14,14 +15,24 @@ app.post('/api/webhooks', express.raw({ type: 'application/json' }), async (req,
   try {
     const evt = await verifyWebhook(req)
 
-    // Do something with payload
-    // For this guide, log payload to console
-    const { id } = evt.data
     const eventType = evt.type
-    console.log(`Received webhook with ID ${id} and event type of ${eventType}`)
-    console.log('Webhook payload:', evt.data)
 
-    return res.send('Webhook received')
+    if (eventType === 'user.created') {
+      const { id } = evt.data
+
+      try {
+        await clerkClient.users.updateUser(id, {
+          publicMetadata: { role: 'user' }
+        });
+        console.log(`User ${id} assigned role: user`);
+        res.status(200).json({ success: true, message: "Role assigned successfully" });
+      } catch (error) {
+        console.error(`Error assigning role to user ${id}:`, error);
+        res.status(500).json({ success: false, message: "Failed to assign role" });
+      }
+    }
+
+
   } catch (err) {
     console.error('Error verifying webhook:', err)
     return res.status(400).send('Error verifying webhook')
@@ -33,6 +44,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware())
 
+// Import routes
+import adminRoutes from './routes/admin/index.js';
+import userRoutes from './routes/user/index.js';
+
+// Register routes
+app.use('/admin', adminRoutes);
+app.use('/user', userRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
