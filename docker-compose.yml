@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+      - "5555:5555"
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - node_modules:/app/node_modules
+    command: nodemon src/app.js
+    restart: unless-stopped
+
+volumes:
+  node_modules:
