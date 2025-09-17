@@ -13,7 +13,8 @@ model Class {
   id              Int      @id @default(autoincrement())
   name            String
   description     String
-  hour            DateTime
+  date            DateTime
+  time            DateTime
   capacity        Int
   enrolled        Int      @default(0)
   createdById     String  

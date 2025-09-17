@@ -3,11 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { clerkClient, clerkMiddleware } from '@clerk/express';
 import { verifyWebhook } from '@clerk/express/webhooks'
+import { PrismaClient } from '@prisma/client';
 
 
 dotenv.config();
 
-
+const prisma = new PrismaClient();
 const app = express();
 
 
@@ -56,6 +57,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+
+app.get('/classes', async (req, res) => {
+  const classes = await prisma.class.findMany();
+  res.json({ classes });
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
