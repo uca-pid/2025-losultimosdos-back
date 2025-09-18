@@ -14,7 +14,7 @@ model Class {
   name            String
   description     String
   date            DateTime
-  time            DateTime
+  time            String
   capacity        Int
   enrolled        Int      @default(0)
   createdById     String  

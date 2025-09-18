@@ -42,6 +42,31 @@ router.post('/enroll', async (req, res) => {
 });
 
 
+router.post('/unenroll', async (req, res) => {
+    const { classId } = req.body;
+    const { userId } = req.auth;
+
+    if (!classId) {
+        return res.status(400).json({ error: 'classId is required' });
+    }
+
+    const gymClass = await prisma.class.findUnique({ where: { id: classId } });
+    if (!gymClass) {
+        return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const newUsers = gymClass.users.filter(user => user !== userId);
+
+
+    const updatedClass = await prisma.class.update({
+        where: { id: classId },
+        data: { users: newUsers, enrolled: { decrement: 1 } }
+    });
+
+    res.json({ message: 'Unenrolled successfully', class: updatedClass });
+
+});
+
 
 router.get('/my-classes', async (req, res) => {
     const { userId } = req.auth;
