@@ -82,10 +82,4 @@ router.get('/my-classes', async (req, res) => {
     }
 });
 
-// Add more user routes here
-// Example:
-// router.get('/profile', (req, res) => {
-//   // Handle user profile
-// });
-
 export default router;

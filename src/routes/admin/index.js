@@ -19,7 +19,6 @@ router.post('/class', async (req, res) => {
     if (!name || !description || !date || !time || !capacity) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-
     const dateTime = new Date(`${date}`);
 
     const { userId } = req.auth;
@@ -28,7 +27,6 @@ router.post('/class', async (req, res) => {
     });
     res.json({ message: 'Class created successfully', class: newClass });
 });
-
 
 router.put('/class/:id', async (req, res) => {
     const { id } = req.params;
