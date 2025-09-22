@@ -4,12 +4,14 @@
   "description": "A simple application to manage todo items using SQLite and JavaScript.",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+
     "docker:build": "docker build -t gymcloud-backend .",
     "docker:start": "docker-compose up -d",
     "docker:stop": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --watchman=false"
   },
   "dependencies": {
     "@clerk/express": "^1.7.31",
@@ -25,8 +27,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.0"
   },
   "type": "module"
+
 }
