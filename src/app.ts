@@ -6,6 +6,8 @@ import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
 
+
+
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -49,11 +51,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
 
-// Import routes
 import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
 
-// Register routes
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 
@@ -79,8 +79,10 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => console.log(`Server on ${PORT}`));
+}
+
+export default app;
