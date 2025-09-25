@@ -1,4 +1,4 @@
-export {}; 
+export {};
 import { jest } from "@jest/globals";
 type GymClass = {
   id: number;
@@ -19,7 +19,6 @@ const db = {
 let CURRENT_USER_ID = "user_test_id";
 let CURRENT_ROLE: "user" | "admin" = "user";
 
-
 jest.mock("@clerk/express", () => {
   const clerkMiddleware = () => (req: any, _res: any, next: any) => {
     req.auth = {
@@ -31,7 +30,6 @@ jest.mock("@clerk/express", () => {
 
   const clerkClient = {
     users: {
-
       getUser: jest.fn(async (id: string) => ({
         id,
         publicMetadata: { role: CURRENT_ROLE },
@@ -56,7 +54,9 @@ jest.mock("@prisma/client", () => {
       findMany: jest.fn(async (args?: any) => {
         if (args?.where?.users?.has) {
           const uid = args.where.users.has as string;
-          return db.classes.filter((c) => Array.isArray(c.users) && c.users.includes(uid));
+          return db.classes.filter(
+            (c) => Array.isArray(c.users) && c.users.includes(uid)
+          );
         }
         return db.classes.map((c) => ({ ...c }));
       }),
@@ -68,7 +68,9 @@ jest.mock("@prisma/client", () => {
       create: jest.fn(async ({ data }: any) => {
         const newId =
           data.id ??
-          (db.classes.length ? Math.max(...db.classes.map((c) => c.id)) + 1 : 1);
+          (db.classes.length
+            ? Math.max(...db.classes.map((c) => c.id)) + 1
+            : 1);
 
         const row: GymClass = {
           id: newId,
@@ -82,6 +84,11 @@ jest.mock("@prisma/client", () => {
           users: Array.isArray(data.users) ? data.users.slice() : [],
         };
 
+        // Ensure users is always an array
+        if (!Array.isArray(row.users)) {
+          row.users = [];
+        }
+
         db.classes.push(row);
         return { ...row };
       }),
@@ -93,6 +100,11 @@ jest.mock("@prisma/client", () => {
         const curr = db.classes[idx];
         const copy: GymClass = { ...curr };
 
+        // Ensure users is always an array
+        if (!Array.isArray(copy.users)) {
+          copy.users = [];
+        }
+
         if (data.name !== undefined) copy.name = data.name;
         if (data.description !== undefined) copy.description = data.description;
         if (data.date !== undefined) copy.date = new Date(data.date);
@@ -100,12 +112,15 @@ jest.mock("@prisma/client", () => {
         if (data.capacity !== undefined) copy.capacity = data.capacity;
 
         if (data.enrolled?.increment !== undefined) {
-          copy.enrolled = (copy.enrolled ?? 0) + Number(data.enrolled.increment || 0);
+          copy.enrolled =
+            (copy.enrolled ?? 0) + Number(data.enrolled.increment || 0);
         }
         if (data.enrolled?.decrement !== undefined) {
-          copy.enrolled = Math.max(0, (copy.enrolled ?? 0) - Number(data.enrolled.decrement || 0));
+          copy.enrolled = Math.max(
+            0,
+            (copy.enrolled ?? 0) - Number(data.enrolled.decrement || 0)
+          );
         }
-
 
         if (data.users !== undefined) {
           const u = data.users;
@@ -116,14 +131,13 @@ jest.mock("@prisma/client", () => {
               copy.users = Array.isArray(copy.users) ? copy.users.slice() : [];
               copy.users.push(String(val));
             }
-          }
-
-          else if (Array.isArray(u)) {
+          } else if (Array.isArray(u)) {
             copy.users = u.map((x) => String(x)).filter((x) => x);
-          }
-         else if (u && typeof u === "object" && "set" in u) {
+          } else if (u && typeof u === "object" && "set" in u) {
             const arr = (u as any).set ?? [];
-            copy.users = arr.map((x: any) => String(x)).filter((x: string) => x);
+            copy.users = arr
+              .map((x: any) => String(x))
+              .filter((x: string) => x);
           }
         }
 
@@ -144,7 +158,6 @@ jest.mock("@prisma/client", () => {
 });
 
 declare global {
-
   var __seedClasses__: (rows: GymClass[]) => void;
   var __resetClasses__: () => void;
   var __setRole__: (role: "user" | "admin") => void;
@@ -177,5 +190,5 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
-    jest.clearAllMocks();
+  jest.clearAllMocks();
 });

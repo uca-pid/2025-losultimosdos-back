@@ -8,13 +8,12 @@ declare const __setUserId__: (id: string) => void;
 
 describe("Flujos end-to-end (admin + user)", () => {
   beforeEach(() => {
-    __resetClasses__();          
-    __setRole__("admin");        
-    __setUserId__("admin_test"); 
+    __resetClasses__();
+    __setRole__("admin");
+    __setUserId__("admin_test");
   });
 
   test("flujo completo: crear → inscribir → actualizar → desinscribir → borrar", async () => {
-
     let list0 = await request(app).get("/classes");
     expect(list0.status).toBe(200);
     expect(Array.isArray(list0.body.classes)).toBe(true);
@@ -56,7 +55,9 @@ describe("Flujos end-to-end (admin + user)", () => {
     expect(enroll.body.class.users).toContain("user_1");
     expect(enroll.body.class.enrolled).toBe(1);
 
-    const enrollAgain = await request(app).post("/user/enroll").send({ classId });
+    const enrollAgain = await request(app)
+      .post("/user/enroll")
+      .send({ classId });
     expect(enrollAgain.status).toBe(400);
     expect(enrollAgain.body.error).toMatch(/Already enrolled/i);
 
@@ -67,15 +68,13 @@ describe("Flujos end-to-end (admin + user)", () => {
     __setRole__("admin");
     __setUserId__("admin_1");
 
-    const update = await request(app)
-      .put(`/admin/class/${classId}`)
-      .send({
-        name: "Cross Avanzado",
-        description: "Más intensidad",
-        date: "2025-10-01T12:30:00Z",
-        time: "12:30",
-        capacity: 10,
-      });
+    const update = await request(app).put(`/admin/class/${classId}`).send({
+      name: "Cross Avanzado",
+      description: "Más intensidad",
+      date: "2025-10-01T12:30:00Z",
+      time: "12:30",
+      capacity: 10,
+    });
 
     expect(update.status).toBe(200);
     expect(update.body.message).toBe("Class updated successfully");
@@ -86,7 +85,9 @@ describe("Flujos end-to-end (admin + user)", () => {
     __setRole__("user");
     __setUserId__("user_1");
 
-    const unenroll = await request(app).post("/user/unenroll").send({ classId });
+    const unenroll = await request(app)
+      .post("/user/unenroll")
+      .send({ classId });
     expect(unenroll.status).toBe(200);
     expect(unenroll.body.message).toBe("Unenrolled successfully");
     expect(unenroll.body.class.users).not.toContain("user_1");
@@ -109,7 +110,6 @@ describe("Flujos end-to-end (admin + user)", () => {
     __setRole__("user");
     __setUserId__("user_x");
 
-  
     const c = await request(app).post("/admin/class").send({
       name: "Yoga",
       description: "Suave",

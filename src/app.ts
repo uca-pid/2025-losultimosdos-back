@@ -52,6 +52,7 @@ app.use(clerkMiddleware());
 import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
 import ClassService from "./services/class.service";
+import { ApiValidationError } from "./services/api-validation-error";
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
@@ -67,10 +68,15 @@ app.get("/classes", async (_req: Request, res: Response) => {
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({
-    error: "Something went wrong!",
-    message: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
+
+  if (err instanceof ApiValidationError) {
+    res.status(err.statusCode).json({ error: err.message });
+  } else {
+    res.status(500).json({
+      error: "Something went wrong!",
+      message: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
 });
 
 app.use((_req: Request, res: Response) => {
