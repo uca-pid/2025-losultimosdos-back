@@ -1,9 +1,10 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import checkUserRole from "../../middleware/user";
 import { ClassEnrollment } from "../../types/class";
 import { validateBody } from "../../middleware/validation";
 import { classEnrollmentSchema } from "../../schemas/class.schema";
 import ClassService from "../../services/class.service";
+import { asyncHandler } from "../../middleware/asyncHandler";
 
 const router = Router();
 
@@ -16,48 +17,34 @@ router.get("/", (_req: Request, res: Response) => {
 router.post(
   "/enroll",
   validateBody(classEnrollmentSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { classId } = req.body as ClassEnrollment;
     const { userId } = req.auth;
 
-    try {
-      const updatedClass = await ClassService.enrollClass(userId, classId);
-
-      res.json({ message: "Enrolled successfully", class: updatedClass });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const updatedClass = await ClassService.enrollClass(userId, classId);
+    res.json({ message: "Enrolled successfully", class: updatedClass });
+  })
 );
 
 router.post(
   "/unenroll",
   validateBody(classEnrollmentSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { classId } = req.body as ClassEnrollment;
     const { userId } = req.auth;
 
-    try {
-      const updatedClass = await ClassService.unenrollClass(userId, classId);
-      res.json({ message: "Unenrolled successfully", class: updatedClass });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const updatedClass = await ClassService.unenrollClass(userId, classId);
+    res.json({ message: "Unenrolled successfully", class: updatedClass });
+  })
 );
 
 router.get(
   "/my-classes",
-  async (req: Request, res: Response, next: NextFunction) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.auth;
-
-    try {
-      const classes = await ClassService.getClassByUserId(userId);
-      res.json({ classes });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const classes = await ClassService.getClassByUserId(userId);
+    res.json({ classes });
+  })
 );
 
 export default router;

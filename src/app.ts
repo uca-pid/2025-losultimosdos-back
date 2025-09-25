@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import { asyncHandler } from "./middleware/asyncHandler";
 import cors from "cors";
 import dotenv from "dotenv";
 import { clerkClient, clerkMiddleware } from "@clerk/express";
@@ -61,10 +62,13 @@ app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.get("/classes", async (_req: Request, res: Response) => {
-  const classes = await ClassService.getAllClasses();
-  res.json({ classes });
-});
+app.get(
+  "/classes",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const classes = await ClassService.getAllClasses();
+    res.json({ classes });
+  })
+);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
