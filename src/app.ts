@@ -6,8 +6,6 @@ import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
 
-
-
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -53,6 +51,7 @@ app.use(clerkMiddleware());
 
 import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
+import ClassService from "./services/class.service";
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
@@ -62,8 +61,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 app.get("/classes", async (_req: Request, res: Response) => {
-  const classes = await prisma.class.findMany();
-  console.log("classes", classes);
+  const classes = await ClassService.getAllClasses();
   res.json({ classes });
 });
 
@@ -78,7 +76,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Route not found" });
 });
-
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== "test") {
