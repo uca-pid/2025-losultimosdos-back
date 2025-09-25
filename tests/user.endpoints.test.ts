@@ -30,27 +30,94 @@ describe("User endpoints (/user)", () => {
     ]);
   });
 
-  test("GET /user/my-classes devuelve [] al inicio", async () => {
+  test("GET /user/my-classes returns [] initially", async () => {
     const res = await request(app).get("/user/my-classes");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ classes: [] });
   });
 
-  test("POST /user/enroll inscribe al usuario en la clase", async () => {
-    const res = await request(app).post("/user/enroll").send({ classId: 1 });
-    expect(res.status).toBe(200);
-    expect(res.body.message).toBe("Enrolled successfully");
-    expect(res.body.class.id).toBe(1);
-    expect(res.body.class.enrolled).toBe(1);
-    expect(res.body.class.users).toContain("user_test_id");
+  describe("POST /user/enroll", () => {
+    test("enrolls user in class successfully", async () => {
+      const res = await request(app).post("/user/enroll").send({ classId: 1 });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Enrolled successfully");
+      expect(res.body.class.id).toBe(1);
+      expect(res.body.class.enrolled).toBe(1);
+      expect(res.body.class.users).toContain("user_test_id");
+    });
+
+    test("rejects enrollment with missing classId", async () => {
+      const res = await request(app).post("/user/enroll").send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Validation failed");
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.any(String),
+          }),
+        ])
+      );
+    });
+
+    test("rejects enrollment with invalid classId type", async () => {
+      const res = await request(app)
+        .post("/user/enroll")
+        .send({ classId: "invalid" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Validation failed");
+    });
+
+    test("rejects enrollment in non-existent class", async () => {
+      const res = await request(app)
+        .post("/user/enroll")
+        .send({ classId: 999 });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("Class not found");
+    });
   });
 
-  test("POST /user/unenroll desinscribe al usuario", async () => {
-    await request(app).post("/user/enroll").send({ classId: 1 });
-    const res = await request(app).post("/user/unenroll").send({ classId: 1 });
-    expect(res.status).toBe(200);
-    expect(res.body.message).toBe("Unenrolled successfully");
-    expect(res.body.class.users).not.toContain("user_test_id");
-    expect(res.body.class.enrolled).toBe(0);
+  describe("POST /user/unenroll", () => {
+    beforeEach(async () => {
+      await request(app).post("/user/enroll").send({ classId: 1 });
+    });
+
+    test("unenrolls user successfully", async () => {
+      const res = await request(app)
+        .post("/user/unenroll")
+        .send({ classId: 1 });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Unenrolled successfully");
+      expect(res.body.class.users).not.toContain("user_test_id");
+      expect(res.body.class.enrolled).toBe(0);
+    });
+
+    test("rejects unenrollment with missing classId", async () => {
+      const res = await request(app).post("/user/unenroll").send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Validation failed");
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.any(String),
+          }),
+        ])
+      );
+    });
+
+    test("rejects unenrollment with invalid classId type", async () => {
+      const res = await request(app)
+        .post("/user/unenroll")
+        .send({ classId: "invalid" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Validation failed");
+    });
+
+    test("rejects unenrollment from non-existent class", async () => {
+      const res = await request(app)
+        .post("/user/unenroll")
+        .send({ classId: 999 });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("Class not found");
+    });
   });
 });
