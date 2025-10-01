@@ -6,6 +6,10 @@ import { clerkClient, clerkMiddleware } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
+import adminRoutes from "./routes/admin/index";
+import userRoutes from "./routes/user/index";
+import ClassService from "./services/class.service";
+import { ApiValidationError } from "./services/api-validation-error";
 
 dotenv.config();
 
@@ -49,11 +53,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
-
-import adminRoutes from "./routes/admin/index";
-import userRoutes from "./routes/user/index";
-import ClassService from "./services/class.service";
-import { ApiValidationError } from "./services/api-validation-error";
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);

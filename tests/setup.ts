@@ -35,6 +35,26 @@ jest.mock("@clerk/express", () => {
         publicMetadata: { role: CURRENT_ROLE },
       })),
       updateUser: jest.fn(async () => ({})),
+      getUserList: jest.fn(async () => [
+        {
+          id: "user_1",
+          firstName: "John",
+          lastName: "Doe",
+          emailAddresses: [{ emailAddress: "john@example.com" }],
+          imageUrl: "https://example.com/john.jpg",
+          createdAt: new Date("2025-09-30").toISOString(),
+          publicMetadata: { role: "user" },
+        },
+        {
+          id: "user_2",
+          firstName: "Jane",
+          lastName: "Smith",
+          emailAddresses: [{ emailAddress: "jane@example.com" }],
+          imageUrl: "https://example.com/jane.jpg",
+          createdAt: new Date("2025-09-29").toISOString(),
+          publicMetadata: { role: "admin" },
+        },
+      ]),
     },
   };
 

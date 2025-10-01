@@ -36,3 +36,8 @@ export const classIdParamSchema = z.object({
     message: "Invalid class ID format ",
   }),
 });
+
+// Schema for enrollment
+export const enrollmentSchema = z.object({
+  userId: z.string("User ID is required"),
+});

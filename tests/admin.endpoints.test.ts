@@ -46,6 +46,31 @@ describe("Admin endpoints (/admin)", () => {
     });
   });
 
+  describe("GET /admin/users", () => {
+    test("returns list of users successfully", async () => {
+      const res = await request(app).get("/admin/users");
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Users retrieved successfully");
+      expect(res.body.users).toHaveLength(2);
+      expect(res.body.users[0]).toEqual({
+        id: "user_1",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        imageUrl: "https://example.com/john.jpg",
+        createdAt: new Date("2025-09-30").toISOString(),
+        role: "user",
+      });
+    });
+
+    test("blocks access if role is not admin", async () => {
+      __setRole__("user");
+      const res = await request(app).get("/admin/users");
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBeDefined();
+    });
+  });
+
   describe("POST /admin/class", () => {
     test("creates a class successfully", async () => {
       const payload = {

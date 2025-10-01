@@ -16,6 +16,7 @@
     "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/express": "^1.7.31",
     "@prisma/client": "^6.16.0",
     "cors": "^2.8.5",
@@ -48,9 +49,8 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"]
-    
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.ts"
+    ]
   }
-
-
 }
