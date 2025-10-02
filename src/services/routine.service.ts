@@ -95,12 +95,9 @@ class RoutineService {
         },
       });
 
-      if (data.replaceExercises) {
-        if (!data.exercises?.length)
-          throw new ApiValidationError(
-            "Routine must have at least one exercise",
-            400
-          );
+      // If exercises are provided, we'll handle them
+      if (data.exercises?.length) {
+        // Validate exercise IDs exist
         const ids = data.exercises.map((e) => e.exerciseId);
         const found = await tx.exercise.findMany({
           where: { id: { in: ids } },
@@ -109,7 +106,12 @@ class RoutineService {
         if (found.length !== ids.length)
           throw new ApiValidationError("Some exerciseId do not exist", 400);
 
-        await tx.routineExercise.deleteMany({ where: { routineId: id } });
+        // Delete existing exercises if replaceExercises is true or undefined (default behavior)
+        if (data.replaceExercises !== false) {
+          await tx.routineExercise.deleteMany({ where: { routineId: id } });
+        }
+
+        // Add new exercises
         await tx.routineExercise.createMany({
           data: data.exercises.map((e) => ({
             routineId: id,

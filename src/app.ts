@@ -12,6 +12,8 @@ import ClassService from "./services/class.service";
 import { ApiValidationError } from "./services/api-validation-error";
 import ExerciseService from "./services/excersice.service";
 import RoutineService from "./services/routine.service";
+import { validateParams } from "./middleware/validation";
+import { routineIdParamSchema } from "./schemas/routine.schema";
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -87,6 +89,16 @@ app.get(
   asyncHandler(async (req, res) => {
     const items = await RoutineService.list();
     res.json({ total: items.length, items });
+  })
+);
+app.get(
+  "/routines/:id",
+  validateParams(routineIdParamSchema),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const r = await RoutineService.getById(id);
+    if (!r) throw new ApiValidationError("Routine not found", 404);
+    res.json(r);
   })
 );
 

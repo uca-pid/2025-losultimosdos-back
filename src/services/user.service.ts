@@ -10,8 +10,15 @@ class UserService {
   }
 
   async getUserById(userId: string) {
-    const user = await clerkClient.users.getUser(userId);
-    return this.sanitizeUser(user);
+    try {
+      const user = await clerkClient.users.getUser(userId);
+      return this.sanitizeUser(user);
+    } catch (error: any) {
+      if (error?.message === "Not Found") {
+        throw new ApiValidationError(`User with ID ${userId} not found`, 404);
+      }
+      throw error;
+    }
   }
 
   async updateUserRole(userId: string, role: string) {

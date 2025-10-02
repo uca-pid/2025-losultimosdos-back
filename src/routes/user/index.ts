@@ -50,20 +50,20 @@ router.get(
 );
 
 router.get(
-  "/:userId",
-  asyncHandler(async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    const user = await UserService.getUserById(userId);
-    res.json(user);
-  })
-);
-
-router.get(
   "/routines",
   asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.auth;
     const routines = await RoutineService.getByUserId(userId);
     res.json({ routines });
+  })
+);
+
+router.get(
+  "/:userId",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const user = await UserService.getUserById(userId);
+    res.json(user);
   })
 );
 
