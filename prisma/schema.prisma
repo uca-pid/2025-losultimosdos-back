@@ -43,7 +43,7 @@ model Routine {
   id          Int       @id @default(autoincrement())
   name        String
   description String?
-  level       String?
+  level       Level
   duration    Int?
   icon        String?
   exercises   RoutineExercise[]
@@ -64,4 +64,10 @@ model RoutineExercise {
 enum Role {
   admin
   user
+}
+
+enum Level {
+  beginner
+  intermediate
+  advanced
 }
