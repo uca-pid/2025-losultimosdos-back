@@ -32,6 +32,10 @@ export const routineIdParamSchema = z.object({
   id: z.string().regex(/^\d+$/).transform(Number),
 });
 
+export const routineAssignSchema = z.object({
+  userId: z.string(),
+});
+
 export const routineExerciseIdParamSchema = z.object({
   id: z.string().regex(/^\d+$/).transform(Number), // routineId
   reId: z.string().regex(/^\d+$/).transform(Number), // routineExerciseId

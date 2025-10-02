@@ -47,6 +47,7 @@ model Routine {
   duration    Int?
   icon        String?
   exercises   RoutineExercise[]
+  users       String[] @default([])
 }
 
 model RoutineExercise {

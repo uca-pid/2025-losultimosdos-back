@@ -216,6 +216,36 @@ class RoutineService {
       }
     });
   }
+
+  async assign(id: number, usersId: string) {
+    const routine = await this.prisma.routine.findUnique({
+      where: { id },
+      select: { users: true },
+    });
+    if (!routine) throw new ApiValidationError("Routine not found", 404);
+    if (routine.users.includes(usersId))
+      throw new ApiValidationError("User already assigned to routine", 400);
+    return this.prisma.routine.update({
+      where: { id },
+      data: { users: { push: usersId } },
+    });
+  }
+
+  async unassign(id: number, usersId: string) {
+    const routine = await this.prisma.routine.findUnique({
+      where: { id },
+      select: { users: true },
+    });
+    if (!routine) throw new ApiValidationError("Routine not found", 404);
+    if (!routine.users.includes(usersId))
+      throw new ApiValidationError("User not assigned to routine", 400);
+    return this.prisma.routine.update({
+      where: { id },
+      data: {
+        users: { set: routine.users.filter((u) => u !== usersId) },
+      },
+    });
+  }
 }
 
 export default new RoutineService();

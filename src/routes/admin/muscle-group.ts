@@ -29,7 +29,7 @@ router.post(
   })
 );
 
-router.patch(
+router.put(
   "/:id",
   validateParams(mgIdParamSchema),
   validateBody(mgUpdateSchema),

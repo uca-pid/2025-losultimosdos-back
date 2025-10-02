@@ -6,6 +6,7 @@ import {
   routineUpdateSchema,
   routineIdParamSchema,
   routineExerciseIdParamSchema,
+  routineAssignSchema,
 } from "../../schemas/routine.schema";
 import RoutineService from "../../services/routine.service";
 import { ApiValidationError } from "../../services/api-validation-error";
@@ -32,7 +33,7 @@ router.post(
   })
 );
 
-router.patch(
+router.put(
   "/:id",
   validateParams(routineIdParamSchema),
   validateBody(routineUpdateSchema),
@@ -87,4 +88,27 @@ router.delete(
   })
 );
 
+router.post(
+  "/:id/assign",
+  validateParams(routineIdParamSchema),
+  validateBody(routineAssignSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as any;
+    const { userId } = req.body as any;
+    await RoutineService.assign(Number(id), userId);
+    res.json({ message: "Routine assigned" });
+  })
+);
+
+router.post(
+  "/:id/unassign",
+  validateParams(routineIdParamSchema),
+  validateBody(routineAssignSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as any;
+    const { userId } = req.body;
+    await RoutineService.unassign(Number(id), userId);
+    res.json({ message: "Routine unassigned" });
+  })
+);
 export default router;
