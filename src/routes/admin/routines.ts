@@ -7,6 +7,7 @@ import {
   routineIdParamSchema,
   routineExerciseIdParamSchema,
   routineAssignSchema,
+  userIdParamSchema,
 } from "../../schemas/routine.schema";
 import RoutineService from "../../services/routine.service";
 import { ApiValidationError } from "../../services/api-validation-error";
@@ -111,4 +112,5 @@ router.post(
     res.json({ message: "Routine unassigned" });
   })
 );
+
 export default router;

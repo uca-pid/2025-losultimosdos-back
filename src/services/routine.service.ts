@@ -246,6 +246,12 @@ class RoutineService {
       },
     });
   }
+
+  async getByUserId(userId: string) {
+    return this.prisma.routine.findMany({
+      where: { users: { has: userId } },
+    });
+  }
 }
 
 export default new RoutineService();

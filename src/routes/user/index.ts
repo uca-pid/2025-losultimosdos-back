@@ -6,6 +6,7 @@ import { classEnrollmentSchema } from "../../schemas/class.schema";
 import ClassService from "../../services/class.service";
 import UserService from "../../services/user.service";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import RoutineService from "../../services/routine.service";
 
 const router = Router();
 
@@ -54,6 +55,15 @@ router.get(
     const { userId } = req.params;
     const user = await UserService.getUserById(userId);
     res.json(user);
+  })
+);
+
+router.get(
+  "/routines",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.auth;
+    const routines = await RoutineService.getByUserId(userId);
+    res.json({ routines });
   })
 );
 
