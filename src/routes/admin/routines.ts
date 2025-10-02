@@ -13,14 +13,6 @@ import { ApiValidationError } from "../../services/api-validation-error";
 const router = Router();
 
 router.get(
-  "/",
-  asyncHandler(async (req, res) => {
-    const items = await RoutineService.list();
-    res.json({ total: items.length, items });
-  })
-);
-
-router.get(
   "/:id",
   validateParams(routineIdParamSchema),
   asyncHandler(async (req, res) => {

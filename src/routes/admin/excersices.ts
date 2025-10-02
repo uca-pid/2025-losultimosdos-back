@@ -10,18 +10,6 @@ import ExerciseService from "../../services/excersice.service";
 
 const router = Router();
 
-router.get(
-  "/",
-  asyncHandler(async (req, res) => {
-    const { q, muscleGroupId } = req.query as any;
-    const items = await ExerciseService.list({
-      q: q as string | undefined,
-      muscleGroupId: muscleGroupId ? Number(muscleGroupId) : undefined,
-    });
-    res.json({ total: items.length, items });
-  })
-);
-
 router.post(
   "/",
   validateBody(exerciseCreateSchema),
@@ -31,7 +19,7 @@ router.post(
   })
 );
 
-router.patch(
+router.put(
   "/:id",
   validateParams(exerciseIdParamSchema),
   validateBody(exerciseUpdateSchema),

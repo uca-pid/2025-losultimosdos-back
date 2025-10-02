@@ -39,20 +39,30 @@ class RoutineService {
   async create(
     data: Omit<Routine, "id"> & { exercises: Omit<RoutineExercise, "id">[] }
   ) {
-    return await this.prisma.routine.create({
+    const routine = await this.prisma.routine.create({
       data: {
         name: data.name,
         description: data.description,
         level: data.level,
         duration: data.duration,
         icon: data.icon,
-        exercises: {
-          createMany: {
-            data: data.exercises,
-          },
-        },
       },
     });
+
+    const exercises = await this.prisma.routineExercise.createMany({
+      data: data.exercises.map((e) => ({
+        routineId: routine.id,
+        exerciseId: e.exerciseId,
+        sets: e.sets ?? null,
+        reps: e.reps ?? null,
+        restTime: e.restTime ?? null,
+      })),
+    });
+
+    return {
+      ...routine,
+      exercises,
+    };
   }
 
   async update(
@@ -79,7 +89,7 @@ class RoutineService {
         data: {
           name: data.name,
           description: data.description,
-          level: data.level,
+          level: data.level as any,
           duration: data.duration,
           icon: data.icon,
         },

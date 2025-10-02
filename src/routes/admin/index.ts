@@ -17,7 +17,7 @@ router.get("/", (_req: Request, res: Response) => {
 router.use("/class", classRoutes);
 router.use("/users", userRoutes);
 router.use("/muscle-group", muscleGroupRoutes);
-router.use("/excersices", excersicesRoutes);
+router.use("/exercises", excersicesRoutes);
 router.use("/routines", routinesRoutes);
 
 export default router;

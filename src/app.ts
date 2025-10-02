@@ -10,7 +10,8 @@ import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
 import ClassService from "./services/class.service";
 import { ApiValidationError } from "./services/api-validation-error";
-
+import ExerciseService from "./services/excersice.service";
+import RoutineService from "./services/routine.service";
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -66,6 +67,26 @@ app.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const classes = await ClassService.getAllClasses();
     res.json({ classes });
+  })
+);
+
+app.get(
+  "/exercises",
+  asyncHandler(async (req, res) => {
+    const { q, muscleGroupId } = req.query as any;
+    const items = await ExerciseService.list({
+      q: q as string | undefined,
+      muscleGroupId: muscleGroupId ? Number(muscleGroupId) : undefined,
+    });
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/routines",
+  asyncHandler(async (req, res) => {
+    const items = await RoutineService.list();
+    res.json({ total: items.length, items });
   })
 );
 
