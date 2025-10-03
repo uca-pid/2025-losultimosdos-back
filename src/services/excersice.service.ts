@@ -58,18 +58,49 @@ class ExerciseService {
     }
   }
 
+  async getExerciseUsage(id: number) {
+    const routines = await this.prisma.routine.findMany({
+      where: {
+        exercises: {
+          some: {
+            exerciseId: id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+    return routines;
+  }
+
   async remove(id: number) {
     try {
-      await this.prisma.exercise.delete({ where: { id } });
-    } catch (e: any) {
-      if (e?.code === "P2003")
+      // First check if exercise exists
+      const exercise = await this.prisma.exercise.findUnique({
+        where: { id },
+        include: { muscleGroup: true },
+      });
+
+      if (!exercise) {
+        throw new ApiValidationError("Exercise not found", 404);
+      }
+
+      // Check if exercise is used in any routines
+      const routines = await this.getExerciseUsage(id);
+      if (routines.length > 0) {
+        const routineNames = routines.map((r) => r.name).join(", ");
         throw new ApiValidationError(
-          "Cannot delete: exercise is used in routines",
+          `Cannot delete exercise "${exercise.name}": It is currently used in the following routines: ${routineNames}`,
           409
         );
-      if (e?.code === "P2025")
-        throw new ApiValidationError("Exercise not found", 404);
-      throw e;
+      }
+
+      await this.prisma.exercise.delete({ where: { id } });
+    } catch (e: any) {
+      if (e instanceof ApiValidationError) throw e;
+      throw new ApiValidationError("Failed to delete exercise", 500);
     }
   }
 }
