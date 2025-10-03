@@ -6,7 +6,14 @@ import { clerkClient, clerkMiddleware } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
-
+import adminRoutes from "./routes/admin/index";
+import userRoutes from "./routes/user/index";
+import ClassService from "./services/class.service";
+import { ApiValidationError } from "./services/api-validation-error";
+import ExerciseService from "./services/excersice.service";
+import RoutineService from "./services/routine.service";
+import { validateParams } from "./middleware/validation";
+import { routineIdParamSchema } from "./schemas/routine.schema";
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -50,11 +57,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
 
-import adminRoutes from "./routes/admin/index";
-import userRoutes from "./routes/user/index";
-import ClassService from "./services/class.service";
-import { ApiValidationError } from "./services/api-validation-error";
-
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 
@@ -67,6 +69,36 @@ app.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const classes = await ClassService.getAllClasses();
     res.json({ classes });
+  })
+);
+
+app.get(
+  "/exercises",
+  asyncHandler(async (req, res) => {
+    const { q, muscleGroupId } = req.query as any;
+    const items = await ExerciseService.list({
+      q: q as string | undefined,
+      muscleGroupId: muscleGroupId ? Number(muscleGroupId) : undefined,
+    });
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/routines",
+  asyncHandler(async (req, res) => {
+    const items = await RoutineService.list();
+    res.json({ total: items.length, items });
+  })
+);
+app.get(
+  "/routines/:id",
+  validateParams(routineIdParamSchema),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const r = await RoutineService.getById(id);
+    if (!r) throw new ApiValidationError("Routine not found", 404);
+    res.json(r);
   })
 );
 
