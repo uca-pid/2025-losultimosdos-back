@@ -8,7 +8,6 @@ datasource db {
 }
 
 
-
 model Class {
   id              Int      @id @default(autoincrement())
   name            String
@@ -21,7 +20,55 @@ model Class {
   users           String[] @default([])
 }
 
+model MuscleGroup {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  exercises Exercise[]
+}
+
+
+
+model Exercise {
+  id            Int           @id @default(autoincrement())
+  name          String
+  equipment     String?
+  videoUrl      String?
+  muscleGroupId Int           
+  muscleGroup   MuscleGroup   @relation(fields: [muscleGroupId], references: [id])
+
+  routines      RoutineExercise[]
+}
+
+model Routine {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  level       Level @default(Beginner)
+  duration    Int?
+  icon        String?
+  exercises   RoutineExercise[]
+  users       String[] @default([])
+}
+
+model RoutineExercise {
+  id         Int      @id @default(autoincrement())
+  routineId  Int
+  exerciseId Int
+  sets       Int?
+  reps       Int?
+  restTime   Int?     // en segundos
+
+  routine    Routine  @relation(fields: [routineId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+}
+
 enum Role {
   admin
   user
+}
+
+enum Level {
+  Beginner
+  Intermediate
+  Advanced
 }
