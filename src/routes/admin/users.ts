@@ -12,11 +12,13 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     try {
       const users = await UserService.getUsers();
+      console.log(users);
       res.json({
         message: "Users retrieved successfully",
         users: users.data.map((user: User) => UserService.sanitizeUser(user)),
       });
     } catch (error) {
+      console.log(error);
       throw new ApiValidationError("Failed to fetch users from Clerk", 500);
     }
   })
