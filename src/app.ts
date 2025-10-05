@@ -67,7 +67,10 @@ app.get("/health", (_req: Request, res: Response) => {
 app.get(
   "/classes",
   asyncHandler(async (_req: Request, res: Response) => {
+    console.log("Getting classes");
     const classes = await ClassService.getAllClasses();
+    console.log("Classes");
+    console.log(classes);
     res.json({ classes });
   })
 );

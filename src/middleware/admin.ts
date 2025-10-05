@@ -30,8 +30,6 @@ const checkAdminRole = async (
     }
 
     const user = await clerkClient.users.getUser(userId);
-    console.log("User");
-    console.log(user);
     const userRole = user.publicMetadata.role as string | undefined;
 
     if (userRole !== "admin") {
