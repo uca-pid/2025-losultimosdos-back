@@ -13,6 +13,8 @@ const checkAdminRole = async (
 
   try {
     if (!userId) {
+      console.log("No userId");
+      console.log(getAuth(req));
       return res.status(401).json({ error: "Unauthorized" });
     }
 
