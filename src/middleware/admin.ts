@@ -8,7 +8,7 @@ const checkAdminRole = async (
 ) => {
   console.log("Checking admin role");
   console.log(req.baseUrl + req.path);
-  console.log(req);
+  console.log(req.headers);
 
   const { userId } = getAuth(req);
 
