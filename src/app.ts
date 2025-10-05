@@ -54,23 +54,16 @@ app.post(
 
 // Log all incoming requests
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
-    headers: req.headers,
-    query: req.query,
-    body: req.body,
-  });
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
 app.use(cors());
-console.log("CORS middleware initialized");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-console.log("Body parser middleware initialized");
 
 app.use(clerkMiddleware());
-console.log("Clerk middleware initialized");
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
@@ -81,31 +74,15 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.get(
   "/classes",
-  asyncHandler(async (req: Request, res: Response) => {
-    console.log("[Classes] Handler reached", {
-      method: req.method,
-      path: req.path,
-      headers: req.headers,
-    });
-
-    try {
-      console.log("[Classes] Fetching classes from service...");
-      const classes = await ClassService.getAllClasses();
-      console.log("[Classes] Successfully retrieved classes:", {
-        count: classes.length,
-        classes: classes,
-      });
-      res.json({ classes });
-    } catch (error) {
-      console.error("[Classes] Error fetching classes:", error);
-      throw error;
-    }
+  asyncHandler(async (_req: Request, res: Response) => {
+    const classes = await ClassService.getAllClasses();
+    res.json({ classes });
   })
 );
 
 app.get(
   "/exercises",
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { q, muscleGroupId } = req.query as any;
     const items = await ExerciseService.list({
       q: q as string | undefined,
@@ -117,7 +94,7 @@ app.get(
 
 app.get(
   "/routines",
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const items = await RoutineService.list();
     res.json({ total: items.length, items });
   })
@@ -125,7 +102,7 @@ app.get(
 app.get(
   "/routines/:id",
   validateParams(routineIdParamSchema),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const r = await RoutineService.getById(id);
     if (!r) throw new ApiValidationError("Routine not found", 404);

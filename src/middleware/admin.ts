@@ -6,16 +6,10 @@ const checkAdminRole = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("Checking admin role");
-  console.log(req.baseUrl + req.path);
-  console.log(req.headers);
-
   const { userId } = getAuth(req);
 
   try {
     if (!userId) {
-      console.log("No userId");
-      console.log(getAuth(req));
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -33,13 +27,11 @@ const checkAdminRole = async (
     const userRole = user.publicMetadata.role as string | undefined;
 
     if (userRole !== "admin") {
-      console.log("User role is not admin");
       return res
         .status(403)
         .json({ error: "Access denied", message: "Admin only" });
     }
 
-    console.log("User role is admin");
     next();
   } catch (error) {
     console.error("Error checking admin role:", error);
