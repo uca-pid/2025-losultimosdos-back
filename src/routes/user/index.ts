@@ -1,4 +1,6 @@
 import { Router, Request, Response } from "express";
+import { getAuth } from "@clerk/express";
+import { ApiValidationError } from "../../services/api-validation-error";
 import checkUserRole from "../../middleware/user";
 import { ClassEnrollment } from "../../types/class";
 import { validateBody } from "../../middleware/validation";
@@ -21,7 +23,10 @@ router.post(
   validateBody(classEnrollmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { classId } = req.body as ClassEnrollment;
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
 
     const updatedClass = await ClassService.enrollClass(userId, classId);
     res.json({ message: "Enrolled successfully", class: updatedClass });
@@ -33,7 +38,10 @@ router.post(
   validateBody(classEnrollmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { classId } = req.body as ClassEnrollment;
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
 
     const updatedClass = await ClassService.unenrollClass(userId, classId);
     res.json({ message: "Unenrolled successfully", class: updatedClass });
@@ -43,7 +51,10 @@ router.post(
 router.get(
   "/my-classes",
   asyncHandler(async (req: Request, res: Response) => {
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
     const classes = await ClassService.getClassByUserId(userId);
     res.json({ classes });
   })
@@ -52,7 +63,10 @@ router.get(
 router.get(
   "/routines",
   asyncHandler(async (req: Request, res: Response) => {
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
     const routines = await RoutineService.getByUserId(userId);
     res.json({ routines });
   })

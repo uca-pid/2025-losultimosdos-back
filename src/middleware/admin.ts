@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 
 const checkAdminRole = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  console.log("Checking admin role");
+  console.log(req.baseUrl + req.path);
+
+  const { userId } = getAuth(req);
+
   try {
-    if (!req.auth?.userId) {
+    if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -21,7 +26,7 @@ const checkAdminRole = async (
       return next();
     }
 
-    const user = await clerkClient.users.getUser(req.auth.userId);
+    const user = await clerkClient.users.getUser(userId);
     const userRole = user.publicMetadata.role as string | undefined;
 
     if (userRole !== "admin") {

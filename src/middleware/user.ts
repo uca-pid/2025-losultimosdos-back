@@ -1,14 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 
-const checkUserRole = async (req: Request, res: Response, next: NextFunction) => {
+const checkUserRole = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-
-    if (process.env.NODE_ENV === "test" && !req.auth?.userId) {
+    if (process.env.NODE_ENV === "test" && !getAuth(req)?.userId) {
       (req as any).auth = { userId: "user_test_id" };
     }
 
-    const userId = req.auth?.userId;
+    const { userId } = getAuth(req);
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { getAuth } from "@clerk/express";
 import { ClassInput } from "../../types/class";
 import { validateBody, validateParams } from "../../middleware/validation";
 import {
@@ -19,7 +20,10 @@ router.post(
     const { name, description, date, time, capacity } = req.body as ClassInput;
     const dateTime = new Date(`${date}`);
 
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
     const newClass = await ClassService.createClass({
       name,
       description,
