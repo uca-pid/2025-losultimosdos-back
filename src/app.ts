@@ -52,10 +52,25 @@ app.post(
   }
 );
 
+// Log all incoming requests
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+    headers: req.headers,
+    query: req.query,
+    body: req.body,
+  });
+  next();
+});
+
 app.use(cors());
+console.log("CORS middleware initialized");
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+console.log("Body parser middleware initialized");
+
 app.use(clerkMiddleware());
+console.log("Clerk middleware initialized");
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
@@ -66,12 +81,25 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.get(
   "/classes",
-  asyncHandler(async (_req: Request, res: Response) => {
-    console.log("Getting classes");
-    const classes = await ClassService.getAllClasses();
-    console.log("Classes");
-    console.log(classes);
-    res.json({ classes });
+  asyncHandler(async (req: Request, res: Response) => {
+    console.log("[Classes] Handler reached", {
+      method: req.method,
+      path: req.path,
+      headers: req.headers,
+    });
+
+    try {
+      console.log("[Classes] Fetching classes from service...");
+      const classes = await ClassService.getAllClasses();
+      console.log("[Classes] Successfully retrieved classes:", {
+        count: classes.length,
+        classes: classes,
+      });
+      res.json({ classes });
+    } catch (error) {
+      console.error("[Classes] Error fetching classes:", error);
+      throw error;
+    }
   })
 );
 
@@ -106,11 +134,24 @@ app.get(
 );
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+  console.error("[Error Handler]", {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    headers: req.headers,
+    query: req.query,
+    body: req.body,
+  });
 
   if (err instanceof ApiValidationError) {
+    console.log("[Error Handler] ApiValidationError:", {
+      statusCode: err.statusCode,
+      message: err.message,
+    });
     res.status(err.statusCode).json({ error: err.message });
   } else {
+    console.error("[Error Handler] Unexpected error:", err);
     res.status(500).json({
       error: "Something went wrong!",
       message: process.env.NODE_ENV === "development" ? err.message : undefined,
