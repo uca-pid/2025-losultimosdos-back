@@ -55,7 +55,7 @@ app.post(
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(clerkMiddleware());
+// app.use(clerkMiddleware());
 
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
