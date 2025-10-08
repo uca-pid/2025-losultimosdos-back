@@ -94,7 +94,6 @@ describe("Admin endpoints (/admin)", () => {
     test("rejects request with missing fields", async () => {
       const incompletePayload = {
         name: "HIIT",
-        // missing other required fields
       };
 
       const res = await request(app)
@@ -172,7 +171,6 @@ describe("Admin endpoints (/admin)", () => {
     test("rejects request with missing required fields", async () => {
       const res = await request(app).put("/admin/class/1").send({
         name: "Updated Class",
-        // missing other required fields
       });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Validation failed");
