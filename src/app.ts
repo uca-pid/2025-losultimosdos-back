@@ -100,13 +100,46 @@ app.get(
   })
 );
 app.get(
-  "/routines/:id",
+  "/routines/users-count",
+  asyncHandler(async (_req, res) => {
+    const items = await RoutineService.listNamesWithUsersCountSQL();
+
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/routines/:id(\\d+)",
   validateParams(routineIdParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const r = await RoutineService.getById(id);
     if (!r) throw new ApiValidationError("Routine not found", 404);
     res.json(r);
+  })
+);
+app.get(
+  "/classes/busiest-hour",
+  asyncHandler(async (req, res) => {
+    const upcoming = String(req.query.upcoming ?? "true").toLowerCase() === "true";
+
+    // JS version (portátil)
+    const items = await ClassService.enrollmentsByHour(upcoming);
+
+    res.json({
+      total: items.length,
+      items,           
+      top: items[0] ?? null, 
+    });
+  })
+);
+
+app.get(
+  "/classes/enrollments-count",
+  asyncHandler(async (req, res) => {
+    const upcoming = String(req.query.upcoming ?? "false").toLowerCase() === "true";
+    const items = await ClassService.listNamesWithEnrollCount(upcoming);
+    res.json({ total: items.length, items });
   })
 );
 

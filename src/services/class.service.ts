@@ -83,6 +83,44 @@ class ClassService {
       },
     });
   }
+  async listNamesWithEnrollCount(upcoming = false): Promise<{ name: string; enrollCount: number }[]> {
+  const where = upcoming ? { date: { gte: new Date() } } : undefined;
+
+  const rows = await this.prisma.class.findMany({
+    where,
+    select: { name: true, enrolled: true },
+    orderBy: { name: "asc" },
+  });
+
+  return rows.map(c => ({
+    name: c.name,
+    enrollCount: c.enrolled ?? 0,
+  }));
+}
+async enrollmentsByHour(upcoming = true): Promise<{ hour: string; total: number }[]> {
+  const where = upcoming ? { date: { gte: new Date() } } : undefined;
+
+  const rows = await this.prisma.class.findMany({
+    where,
+    select: { time: true, enrolled: true },
+  });
+
+  const buckets = new Map<string, number>();
+  for (const r of rows) {
+    const match = typeof r.time === "string" ? r.time.match(/^(\d{1,2})/) : null;
+    if (!match) continue;
+    const hour = match[1].padStart(2, "0"); // "9" -> "09"
+    const curr = buckets.get(hour) ?? 0;
+    buckets.set(hour, curr + (r.enrolled ?? 0));
+  }
+
+  const items = Array.from(buckets, ([hour, total]) => ({ hour, total }))
+    .sort((a, b) => (b.total - a.total) || a.hour.localeCompare(b.hour));
+
+  return items;
+}
+
+
 }
 
 export default new ClassService();
