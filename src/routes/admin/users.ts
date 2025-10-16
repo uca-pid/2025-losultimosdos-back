@@ -70,4 +70,17 @@ router.get(
   })
 );
 
+router.put(
+  "/:userId/plan",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { plan } = req.body;
+    const user = await UserService.updateUserPlan(userId, plan);
+    res.json({
+      message: "User plan updated successfully",
+      user: UserService.sanitizeUser(user),
+    });
+  })
+);
+
 export default router;

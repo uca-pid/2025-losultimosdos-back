@@ -1,5 +1,6 @@
 import { Class, PrismaClient } from "@prisma/client";
 import { ApiValidationError } from "./api-validation-error";
+import UserService from "./user.service";
 
 class ClassService {
   private readonly prisma: PrismaClient;
@@ -23,7 +24,19 @@ class ClassService {
   }
 
   async getClassByUserId(userId: string) {
-    return this.prisma.class.findMany({ where: { users: { has: userId } } });
+    return this.prisma.class.findMany({
+      where: { users: { has: userId }, date: { gte: new Date() } },
+    });
+  }
+
+  private async getFutureClassCount(userId: string): Promise<number> {
+    const classes = await this.prisma.class.count({
+      where: {
+        users: { has: userId },
+        date: { gte: new Date() },
+      },
+    });
+    return classes;
   }
 
   async createClass(classData: Omit<Class, "id" | "users" | "enrolled">) {
@@ -49,7 +62,11 @@ class ClassService {
   }
 
   async enrollClass(userId: string, classId: number) {
-    const classData = await this.getClassById(classId);
+    const [classData, user] = await Promise.all([
+      this.getClassById(classId),
+      UserService.getUserById(userId),
+    ]);
+
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
     }
@@ -59,6 +76,17 @@ class ClassService {
     if (classData.users.length >= classData.capacity) {
       throw new ApiValidationError("Class is full", 400);
     }
+
+    if (user.plan === "basic") {
+      const futureClassCount = await this.getFutureClassCount(userId);
+      if (futureClassCount >= 3) {
+        throw new ApiValidationError(
+          "Los usuarios del plan básico solo pueden inscribirse hasta en 3 clases futuras.",
+          403
+        );
+      }
+    }
+
     return this.prisma.class.update({
       where: { id: classId },
       data: { users: { push: userId }, enrolled: { increment: 1 } },
@@ -82,6 +110,49 @@ class ClassService {
         enrolled: wasEnrolled ? { decrement: 1 } : undefined,
       },
     });
+  }
+  async listNamesWithEnrollCount(
+    upcoming = false
+  ): Promise<{ name: string; enrollCount: number }[]> {
+    const where = upcoming ? { date: { gte: new Date() } } : undefined;
+
+    const rows = await this.prisma.class.findMany({
+      where,
+      select: { name: true, enrolled: true },
+      orderBy: { name: "asc" },
+    });
+
+    return rows.map((c) => ({
+      name: c.name,
+      enrollCount: c.enrolled ?? 0,
+    }));
+  }
+  async enrollmentsByHour(
+    upcoming = true
+  ): Promise<{ hour: string; total: number }[]> {
+    const where = upcoming ? { date: { gte: new Date() } } : undefined;
+
+    const rows = await this.prisma.class.findMany({
+      where,
+      select: { time: true, enrolled: true },
+    });
+
+    const buckets = new Map<string, number>();
+    for (const r of rows) {
+      const match =
+        typeof r.time === "string" ? r.time.match(/^(\d{1,2})/) : null;
+      if (!match) continue;
+      const hour = match[1].padStart(2, "0"); // "9" -> "09"
+      const curr = buckets.get(hour) ?? 0;
+      buckets.set(hour, curr + (r.enrolled ?? 0));
+    }
+
+    const items = Array.from(buckets, ([hour, total]) => ({
+      hour,
+      total,
+    })).sort((a, b) => b.total - a.total || a.hour.localeCompare(b.hour));
+
+    return items;
   }
 }
 

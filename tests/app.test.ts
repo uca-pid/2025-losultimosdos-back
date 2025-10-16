@@ -4,7 +4,6 @@ import app from "../src/app";
 import { clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 
-// Mock Clerk client and webhook verification
 jest.mock("@clerk/express", () => ({
   clerkClient: {
     users: {
@@ -109,15 +108,12 @@ describe("App", () => {
     });
 
     test("handles internal server errors", async () => {
-      // Create a new Express app for testing error handling
       const testApp = express();
 
-      // Add test route that throws an error
       testApp.get("/test-error", (_req, _res, next) => {
         next(new Error("Test error"));
       });
 
-      // Add error handler
       testApp.use(
         (err: Error, _req: Request, res: Response, _next: NextFunction) => {
           res.status(500).json({
@@ -132,7 +128,6 @@ describe("App", () => {
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty("error", "Something went wrong!");
 
-      // Check error message in development mode
       process.env.NODE_ENV = "development";
       const devRes = await request(testApp).get("/test-error");
       expect(devRes.body).toHaveProperty("message", "Test error");

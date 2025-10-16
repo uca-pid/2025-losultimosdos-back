@@ -72,3 +72,10 @@ enum Level {
   Intermediate
   Advanced
 }
+
+model DailyUserCount {
+  id        Int       @id @default(autoincrement())
+  date      DateTime
+  basic Int @default(0)
+  premium Int @default(0)
+}

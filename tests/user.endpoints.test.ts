@@ -84,17 +84,14 @@ describe("User endpoints (/user)", () => {
     });
 
     test("rejects enrollment when already enrolled", async () => {
-      // First enrollment
       await request(app).post("/user/enroll").send({ classId: 1 });
 
-      // Try to enroll again
       const res = await request(app).post("/user/enroll").send({ classId: 1 });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Already enrolled in this class");
     });
 
     test("rejects enrollment when class is full", async () => {
-      // Create a class with capacity 1 and already enrolled user
       (globalThis as any).__resetClasses__();
       (globalThis as any).__seedClasses__([
         {

@@ -4,14 +4,19 @@ import { clerkClient } from "@clerk/express";
 import checkAdminRole from "../src/middleware/admin";
 import checkUserRole from "../src/middleware/user";
 
-// Mock Clerk client
-jest.mock("@clerk/express", () => ({
-  clerkClient: {
-    users: {
-      getUser: jest.fn(),
+jest.mock("@clerk/express", () => {
+  return {
+    clerkClient: {
+      users: {
+        getUser: jest.fn(),
+      },
     },
-  },
-}));
+    getAuth: (req: any) => ({
+      userId: req?.auth?.userId ?? null,
+    }),
+    requireAuth: () => (_req: any, _res: any, next: any) => next(),
+  };
+});
 
 describe("Middleware", () => {
   let mockReq: Partial<Request & { auth: Partial<User> & { userId: string } }>;
@@ -22,7 +27,6 @@ describe("Middleware", () => {
     mockReq = {
       auth: {
         userId: "test_user_id",
-        // Add required User properties from @clerk/express
         id: "test_user_id",
         passwordEnabled: true,
         totpEnabled: false,
@@ -47,8 +51,7 @@ describe("Middleware", () => {
         imageUrl: "",
         gender: "",
         birthday: "",
-        // Add any other required User properties
-      } as any, // Type assertion to avoid strict type checking
+      } as any,
     };
     mockRes = {
       status: jest.fn().mockReturnThis(),
@@ -159,7 +162,7 @@ describe("Middleware", () => {
   describe("User Middleware", () => {
     test("allows user access in test environment", async () => {
       process.env.NODE_ENV = "test";
-      mockReq.auth = undefined;
+      (mockReq as any).auth = { userId: "user_test_id", userRole: "user" };
 
       (clerkClient.users.getUser as jest.Mock).mockResolvedValue({
         publicMetadata: { role: "user" },
