@@ -1,8 +1,12 @@
 import { clerkClient, User } from "@clerk/express";
 import { ApiValidationError } from "./api-validation-error";
+import { PrismaClient } from "@prisma/client";
 
 class UserService {
-  constructor() {}
+  private readonly prisma: PrismaClient;
+  constructor() {
+    this.prisma = new PrismaClient();
+  }
   async getUsers() {
     return await clerkClient.users.getUserList({
       limit: 100,
@@ -25,11 +29,61 @@ class UserService {
     if (role !== "admin" && role !== "user") {
       throw new ApiValidationError("Invalid role", 400);
     }
+    const user = await clerkClient.users.getUser(userId);
     return await clerkClient.users.updateUser(userId, {
-      publicMetadata: { role },
+      publicMetadata: {
+        ...user.publicMetadata,
+        role,
+      },
     });
   }
 
+  async updateUserPlan(userId: string, plan: string) {
+    if (plan !== "basic" && plan !== "premium") {
+      throw new ApiValidationError(
+        "Invalid plan. Must be either 'basic' or 'premium'",
+        400
+      );
+    }
+    const user = await clerkClient.users.getUser(userId);
+    return await clerkClient.users.updateUser(userId, {
+      publicMetadata: {
+        ...user.publicMetadata,
+        plan,
+      },
+    });
+  }
+
+  async getDailyUserCount() {
+    const dailyUserCount = await this.prisma.dailyUserCount.findMany({
+      orderBy: {
+        date: "desc",
+      },
+      where: {
+        date: {
+          lt: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+      take: 90,
+    });
+
+    const users = await this.getUsers();
+    const basic = users.data.filter(
+      (user) => user.publicMetadata.plan === "basic"
+    ).length;
+    const premium = users.data.filter(
+      (user) => user.publicMetadata.plan === "premium"
+    ).length;
+
+    return [
+      ...dailyUserCount,
+      {
+        date: new Date(),
+        basic,
+        premium,
+      },
+    ];
+  }
   sanitizeUser(user: User) {
     return {
       id: user.id,
@@ -39,6 +93,7 @@ class UserService {
       imageUrl: user.imageUrl,
       createdAt: user.createdAt,
       role: user.publicMetadata.role as string,
+      plan: user.publicMetadata.plan as string,
     };
   }
 }

@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import cron from "node-cron";
 import { asyncHandler } from "./middleware/asyncHandler";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -14,6 +15,7 @@ import ExerciseService from "./services/excersice.service";
 import RoutineService from "./services/routine.service";
 import { validateParams } from "./middleware/validation";
 import { routineIdParamSchema } from "./schemas/routine.schema";
+import UserService from "./services/user.service";
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -32,7 +34,7 @@ app.post(
 
         try {
           await clerkClient.users.updateUser(id, {
-            publicMetadata: { role: "user" },
+            publicMetadata: { role: "user", plan: "basic" },
           });
           console.log(`User ${id} assigned role: user`);
           res
@@ -52,6 +54,34 @@ app.post(
   }
 );
 
+cron.schedule("0 0 * * *", async () => {
+  console.log("Running daily user count job...");
+
+  try {
+    const users = await clerkClient.users.getUserList({
+      limit: 100,
+    });
+
+    const basic = users.data.filter(
+      (user) => user.publicMetadata.plan === "basic"
+    ).length;
+    const premium = users.data.filter(
+      (user) => user.publicMetadata.plan === "premium"
+    ).length;
+
+    await prisma.dailyUserCount.create({
+      data: {
+        date: new Date(),
+        basic,
+        premium,
+      },
+    });
+
+    console.log("✅ User count saved:", basic, premium);
+  } catch (err) {
+    console.error("❌ Error saving user count:", err);
+  }
+});
 // Log all incoming requests
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
@@ -121,15 +151,15 @@ app.get(
 app.get(
   "/classes/busiest-hour",
   asyncHandler(async (req, res) => {
-    const upcoming = String(req.query.upcoming ?? "true").toLowerCase() === "true";
+    const upcoming =
+      String(req.query.upcoming ?? "true").toLowerCase() === "true";
 
-    // JS version (portátil)
     const items = await ClassService.enrollmentsByHour(upcoming);
 
     res.json({
       total: items.length,
-      items,           
-      top: items[0] ?? null, 
+      items,
+      top: items[0] ?? null,
     });
   })
 );
@@ -137,12 +167,22 @@ app.get(
 app.get(
   "/classes/enrollments-count",
   asyncHandler(async (req, res) => {
-    const upcoming = String(req.query.upcoming ?? "false").toLowerCase() === "true";
+    const upcoming =
+      String(req.query.upcoming ?? "false").toLowerCase() === "true";
     const items = await ClassService.listNamesWithEnrollCount(upcoming);
     res.json({ total: items.length, items });
   })
 );
 
+app.get(
+  "/daily-user-count",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const dailyUserCount = await UserService.getDailyUserCount();
+    res.json({
+      data: dailyUserCount,
+    });
+  })
+);
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error("[Error Handler]", {
     error: err.message,
