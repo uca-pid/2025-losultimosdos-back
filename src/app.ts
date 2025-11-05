@@ -16,6 +16,8 @@ import RoutineService from "./services/routine.service";
 import { validateParams } from "./middleware/validation";
 import { routineIdParamSchema } from "./schemas/routine.schema";
 import UserService from "./services/user.service";
+import GoalService from "./services/goal.service"; 
+
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -52,6 +54,21 @@ app.post(
       return res.status(400).send("Error verifying webhook");
     }
   }
+);
+
+app.get(
+  "/goals",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { active } = req.query as { active?: string };
+
+    const filters: { active?: boolean } = {};
+    if (active === "true") filters.active = true;
+    if (active === "false") filters.active = false;
+
+    const goals = await GoalService.list(filters);
+
+    res.json({ goals });
+  })
 );
 
 cron.schedule("0 0 * * *", async () => {

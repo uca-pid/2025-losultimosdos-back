@@ -79,3 +79,31 @@ model DailyUserCount {
   basic Int @default(0)
   premium Int @default(0)
 }
+
+enum GoalType {
+  MEMBERS   
+  CLASS     
+  ROUTINE   
+}
+
+enum MembersScope {
+  TOTAL     
+  BASIC     
+  PREMIUM   
+}
+
+model Goal {
+  id           Int           @id @default(autoincrement())
+  title        String
+  description  String
+  type         GoalType
+  membersScope MembersScope?
+  classId      Int?
+  routineId    Int?
+  targetValue  Int
+  progress     Int           @default(0)
+  endDate      DateTime
+  completed    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
