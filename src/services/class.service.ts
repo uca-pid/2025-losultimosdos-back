@@ -19,6 +19,13 @@ class ClassService {
     });
   }
 
+  async getAllClassesBySedeId(sedeId: number) {
+    const today = new Date();
+    return this.prisma.class.findMany({
+      where: { sedeId, date: { gte: today } },
+    });
+  }
+
   async getClassById(id: number) {
     return this.prisma.class.findUnique({ where: { id } });
   }
@@ -113,44 +120,88 @@ class ClassService {
   }
   async listNamesWithEnrollCount(
     upcoming = false
-  ): Promise<{ name: string; enrollCount: number }[]> {
+  ): Promise<
+    { name: string; enrollCount: number; sede: { id: number; name: string } }[]
+  > {
     const where = upcoming ? { date: { gte: new Date() } } : undefined;
 
     const rows = await this.prisma.class.findMany({
-      where,
-      select: { name: true, enrolled: true },
+      where: { ...where },
+      select: {
+        name: true,
+        enrolled: true,
+        sede: { select: { id: true, name: true } },
+      },
       orderBy: { name: "asc" },
     });
 
     return rows.map((c) => ({
       name: c.name,
       enrollCount: c.enrolled ?? 0,
+      sede: { id: c.sede.id, name: c.sede.name },
     }));
   }
-  async enrollmentsByHour(
-    upcoming = true
-  ): Promise<{ hour: string; total: number }[]> {
+  async enrollmentsByHour(upcoming = true): Promise<
+    {
+      sedeId: number;
+      sedeName: string;
+      hours: { hour: string; total: number }[];
+    }[]
+  > {
     const where = upcoming ? { date: { gte: new Date() } } : undefined;
 
     const rows = await this.prisma.class.findMany({
       where,
-      select: { time: true, enrolled: true },
+      select: {
+        time: true,
+        enrolled: true,
+        sedeId: true,
+        sede: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
-    const buckets = new Map<string, number>();
+    // Group by sedeId first
+    const sedeBuckets = new Map<
+      number,
+      { name: string; hourBuckets: Map<string, number> }
+    >();
+
     for (const r of rows) {
       const match =
         typeof r.time === "string" ? r.time.match(/^(\d{1,2})/) : null;
       if (!match) continue;
+
       const hour = match[1].padStart(2, "0"); // "9" -> "09"
-      const curr = buckets.get(hour) ?? 0;
-      buckets.set(hour, curr + (r.enrolled ?? 0));
+
+      if (!sedeBuckets.has(r.sedeId)) {
+        sedeBuckets.set(r.sedeId, {
+          name: r.sede.name,
+          hourBuckets: new Map<string, number>(),
+        });
+      }
+
+      const sedeData = sedeBuckets.get(r.sedeId)!;
+      const curr = sedeData.hourBuckets.get(hour) ?? 0;
+      sedeData.hourBuckets.set(hour, curr + (r.enrolled ?? 0));
     }
 
-    const items = Array.from(buckets, ([hour, total]) => ({
-      hour,
-      total,
-    })).sort((a, b) => b.total - a.total || a.hour.localeCompare(b.hour));
+    // Convert to final format
+    const items = Array.from(sedeBuckets, ([sedeId, sedeData]) => {
+      const hours = Array.from(sedeData.hourBuckets, ([hour, total]) => ({
+        hour,
+        total,
+      })).sort((a, b) => b.total - a.total || a.hour.localeCompare(b.hour));
+
+      return {
+        sedeId,
+        sedeName: sedeData.name,
+        hours,
+      };
+    }).sort((a, b) => a.sedeId - b.sedeId);
 
     return items;
   }

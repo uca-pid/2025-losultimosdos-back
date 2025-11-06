@@ -18,6 +18,9 @@ model Class {
   enrolled        Int      @default(0)
   createdById     String  
   users           String[] @default([])
+  sedeId          Int
+  sede            Sede   @relation(fields: [sedeId], references: [id])
+  goals           Goal[]
 }
 
 model MuscleGroup {
@@ -25,7 +28,6 @@ model MuscleGroup {
   name      String     @unique
   exercises Exercise[]
 }
-
 
 
 model Exercise {
@@ -48,6 +50,9 @@ model Routine {
   icon        String?
   exercises   RoutineExercise[]
   users       String[] @default([])
+  sedeId      Int
+  sede        Sede   @relation(fields: [sedeId], references: [id])
+  goals       Goal[]
 }
 
 model RoutineExercise {
@@ -78,4 +83,47 @@ model DailyUserCount {
   date      DateTime
   basic Int @default(0)
   premium Int @default(0)
+  sedeId Int @default(1)
+  sede Sede @relation(fields: [sedeId], references: [id])
+}
+
+
+model Sede {
+  id Int @id @default(autoincrement())
+  name String
+  address String
+  latitude Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  classes   Class[]
+  users     String[] @default([])
+  routines  Routine[]
+  dailyUserCount DailyUserCount[]
+  goals     Goal[]
+}
+
+enum GoalCategory {
+  USER_REGISTRATIONS
+  CLASS_ENROLLMENTS
+  ROUTINE_ASSIGNMENTS
+}
+
+model Goal {
+  id              Int          @id @default(autoincrement())
+  title           String
+  description     String?
+  category        GoalCategory
+  targetValue     Int
+  currentValue    Int          @default(0)
+  startDate       DateTime     @default(now())
+  endDate         DateTime
+  sedeId          Int
+  sede            Sede         @relation(fields: [sedeId], references: [id], onDelete: Cascade)
+  targetClassId   Int?
+  targetClass     Class?       @relation(fields: [targetClassId], references: [id], onDelete: SetNull)
+  targetRoutineId Int?
+  targetRoutine   Routine?     @relation(fields: [targetRoutineId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }

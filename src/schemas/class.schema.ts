@@ -20,6 +20,10 @@ export const classInputSchema = z.object({
     .number("Capacity is required")
     .int("Capacity must be an integer")
     .positive("Capacity must be a positive number"),
+  sedeId: z
+    .number("Sede ID is required")
+    .int("Sede ID must be an integer")
+    .positive("Sede ID must be a positive number"),
 });
 
 // Schema for class enrollment/unenrollment

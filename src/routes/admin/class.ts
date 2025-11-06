@@ -17,7 +17,8 @@ router.post(
   "/",
   validateBody(classInputSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { name, description, date, time, capacity } = req.body as ClassInput;
+    const { name, description, date, time, capacity, sedeId } =
+      req.body as ClassInput;
     const dateTime = new Date(`${date}`);
 
     const { userId } = getAuth(req);
@@ -30,6 +31,7 @@ router.post(
       date: dateTime,
       time,
       capacity,
+      sedeId,
       createdById: userId,
     });
     res.json({ message: "Class created successfully", class: newClass });
@@ -42,7 +44,8 @@ router.put(
   validateBody(classInputSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, description, date, time, capacity } = req.body as ClassInput;
+    const { name, description, date, time, capacity, sedeId } =
+      req.body as ClassInput;
     const numberId = parseInt(id);
 
     const gymClass = await ClassService.getClassById(numberId);
@@ -57,6 +60,7 @@ router.put(
       date: dateTime,
       time,
       capacity,
+      sedeId,
       enrolled: gymClass.enrolled,
       users: gymClass.users,
     });

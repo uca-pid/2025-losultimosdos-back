@@ -4,6 +4,7 @@ export interface ClassInput {
   date: string;
   time: string;
   capacity: number;
+  sedeId: number;
 }
 
 export interface ClassEnrollment {
