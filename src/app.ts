@@ -34,7 +34,7 @@ app.post(
 
         try {
           await clerkClient.users.updateUser(id, {
-            publicMetadata: { role: "user", plan: "basic" },
+            publicMetadata: { role: "user", plan: "basic", sede: "1" },
           });
           console.log(`User ${id} assigned role: user`);
           res
@@ -82,7 +82,7 @@ cron.schedule("0 0 * * *", async () => {
     console.error("❌ Error saving user count:", err);
   }
 });
-// Log all incoming requests
+
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -104,8 +104,12 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.get(
   "/classes",
-  asyncHandler(async (_req: Request, res: Response) => {
-    const classes = await ClassService.getAllClasses();
+  asyncHandler(async (req: Request, res: Response) => {
+    const sedeId = Number(req.query.sedeId);
+    if (!sedeId) {
+      throw new ApiValidationError("Sede ID is required", 400);
+    }
+    const classes = await ClassService.getAllClassesBySedeId(sedeId);
     res.json({ classes });
   })
 );
@@ -124,15 +128,21 @@ app.get(
 
 app.get(
   "/routines",
-  asyncHandler(async (_req: Request, res: Response) => {
-    const items = await RoutineService.list();
+  asyncHandler(async (req: Request, res: Response) => {
+    const sedeId = Number(req.query.sedeId);
+    if (!sedeId) {
+      throw new ApiValidationError("Sede ID is required", 400);
+    }
+    const items = await RoutineService.list(sedeId);
+
     res.json({ total: items.length, items });
   })
 );
+
 app.get(
   "/routines/users-count",
-  asyncHandler(async (_req, res) => {
-    const items = await RoutineService.listNamesWithUsersCountSQL();
+  asyncHandler(async (req, res) => {
+    const items = await RoutineService.listNamesWithUsersCount();
 
     res.json({ total: items.length, items });
   })
@@ -159,7 +169,6 @@ app.get(
     res.json({
       total: items.length,
       items,
-      top: items[0] ?? null,
     });
   })
 );
@@ -176,13 +185,34 @@ app.get(
 
 app.get(
   "/daily-user-count",
-  asyncHandler(async (_req: Request, res: Response) => {
-    const dailyUserCount = await UserService.getDailyUserCount();
+  asyncHandler(async (req: Request, res: Response) => {
+    const sedeId = Number(req.query.sedeId);
+    if (!sedeId) {
+      throw new ApiValidationError("Sede ID is required", 400);
+    }
+    const dailyUserCount = await UserService.getDailyUserCount(sedeId);
     res.json({
       data: dailyUserCount,
     });
   })
 );
+
+app.get(
+  "/sedes",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const sedes = await prisma.sede.findMany();
+    res.json({
+      sedes: sedes.map((sede) => ({
+        id: sede.id,
+        name: sede.name,
+        address: sede.address,
+        latitude: sede.latitude,
+        longitude: sede.longitude,
+      })),
+    });
+  })
+);
+
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error("[Error Handler]", {
     error: err.message,

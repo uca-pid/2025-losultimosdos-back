@@ -11,6 +11,7 @@ type GymClass = {
   enrolled: number;
   createdById: string;
   users: string[];
+  sedeId: number;
 };
 type MuscleGroup = { id: number; name: string };
 type Exercise = { id: number; name: string; muscleGroupId: number };
@@ -22,6 +23,7 @@ type Routine = {
   duration: number | null;
   icon: string | null;
   users: string[];
+  sedeId: number;
 };
 type RoutineExercise = {
   id: number;
@@ -32,6 +34,31 @@ type RoutineExercise = {
   restTime: number;
 };
 
+type Sede = {
+  id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  users: string[];
+};
+
+type Goal = {
+  id: number;
+  title: string;
+  description: string | null;
+  category: "USER_REGISTRATIONS" | "CLASS_ENROLLMENTS" | "ROUTINE_ASSIGNMENTS";
+  targetValue: number;
+  currentValue: number;
+  startDate: Date;
+  endDate: Date;
+  sedeId: number;
+  targetClassId: number | null;
+  targetRoutineId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const G = globalThis as any;
 G.__TEST_DB__ ??= {
   classes: [] as GymClass[],
@@ -39,6 +66,8 @@ G.__TEST_DB__ ??= {
   exercises: [] as Exercise[],
   routines: [] as Routine[],
   routineExercises: [] as RoutineExercise[],
+  sedes: [] as Sede[],
+  goals: [] as Goal[],
   CURRENT_USER_ID: "user_test_id",
   CURRENT_ROLE: "user",
 };
@@ -57,6 +86,10 @@ declare global {
   var __resetRoutines__: () => void;
   var __seedRoutineExercises__: (rows: RoutineExercise[]) => void;
   var __resetRoutineExercises__: () => void;
+  var __seedSedes__: (rows: Sede[]) => void;
+  var __resetSedes__: () => void;
+  var __seedGoals__: (rows: Goal[]) => void;
+  var __resetGoals__: () => void;
 }
 
 global.__seedMuscleGroups__ = (rows: MuscleGroup[]) => {
@@ -101,6 +134,29 @@ global.__setRole__ = (role: "user" | "admin") => {
 };
 global.__setUserId__ = (id: string) => {
   db.CURRENT_USER_ID = id;
+};
+
+global.__seedSedes__ = (rows: Sede[]) => {
+  db.sedes = rows.map((r) => ({
+    ...r,
+    users: Array.isArray(r.users) ? r.users.slice() : [],
+  }));
+};
+global.__resetSedes__ = () => {
+  db.sedes = [];
+};
+
+global.__seedGoals__ = (rows: Goal[]) => {
+  db.goals = rows.map((r) => ({
+    ...r,
+    startDate: new Date(r.startDate),
+    endDate: new Date(r.endDate),
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt),
+  }));
+};
+global.__resetGoals__ = () => {
+  db.goals = [];
 };
 
 beforeAll(() => {

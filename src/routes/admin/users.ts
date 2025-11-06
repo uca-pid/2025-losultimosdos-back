@@ -11,8 +11,16 @@ router.get(
   "/",
   asyncHandler(async (_req: Request, res: Response) => {
     try {
-      const users = await UserService.getUsers();
-      const sanitizedUsers = users.data.map((user: User) =>
+      const sedeId = Number(_req.query.sedeId);
+
+      let users: User[] = [];
+      if (sedeId) {
+        users = await UserService.getUsersBySedeId(sedeId);
+      } else {
+        const usersResponse = await UserService.getUsers();
+        users = usersResponse.data;
+      }
+      const sanitizedUsers = users.map((user: User) =>
         UserService.sanitizeUser(user)
       );
       res.json({
@@ -78,6 +86,19 @@ router.put(
     const user = await UserService.updateUserPlan(userId, plan);
     res.json({
       message: "User plan updated successfully",
+      user: UserService.sanitizeUser(user),
+    });
+  })
+);
+
+router.put(
+  "/:userId/sede",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { sedeId } = req.body;
+    const user = await UserService.updateUserSede(userId, sedeId);
+    res.json({
+      message: "User sede updated successfully",
       user: UserService.sanitizeUser(user),
     });
   })

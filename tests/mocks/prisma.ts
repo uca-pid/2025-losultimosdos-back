@@ -1,4 +1,4 @@
-import { jest } from "@jest/globals"; 
+import { jest } from "@jest/globals";
 
 type GymClass = {
   id: number;
@@ -10,6 +10,7 @@ type GymClass = {
   enrolled: number;
   createdById: string;
   users: string[];
+  sedeId: number;
 };
 type MuscleGroup = { id: number; name: string };
 type Exercise = { id: number; name: string; muscleGroupId: number };
@@ -21,6 +22,7 @@ type Routine = {
   duration: number | null;
   icon: string | null;
   users: string[];
+  sedeId: number;
 };
 type RoutineExercise = {
   id: number;
@@ -31,6 +33,30 @@ type RoutineExercise = {
   restTime: number;
 };
 
+type Sede = {
+  id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  users: string[];
+};
+
+type Goal = {
+  id: number;
+  title: string;
+  description: string | null;
+  category: "USER_REGISTRATIONS" | "CLASS_ENROLLMENTS" | "ROUTINE_ASSIGNMENTS";
+  targetValue: number;
+  currentValue: number;
+  startDate: Date;
+  endDate: Date;
+  sedeId: number;
+  targetClassId: number | null;
+  targetRoutineId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 interface TestDB {
   classes: GymClass[];
@@ -38,6 +64,8 @@ interface TestDB {
   exercises: Exercise[];
   routines: Routine[];
   routineExercises: RoutineExercise[];
+  sedes: Sede[];
+  goals: Goal[];
   CURRENT_USER_ID: string;
   CURRENT_ROLE: "user" | "admin";
 }
@@ -50,6 +78,8 @@ if (!G.__TEST_DB__) {
     exercises: [],
     routines: [],
     routineExercises: [],
+    sedes: [],
+    goals: [],
     CURRENT_USER_ID: "user_test_id",
     CURRENT_ROLE: "user",
   };
@@ -82,15 +112,22 @@ export class PrismaClient {
     findMany: jest.fn(async (args?: any) => {
       if (args?.where?.users?.has) {
         const uid = args.where.users.has as string;
-        return db.classes.filter((c) => Array.isArray(c.users) && c.users.includes(uid));
+        return db.classes.filter(
+          (c) => Array.isArray(c.users) && c.users.includes(uid)
+        );
       }
       return db.classes.map((c) => ({ ...c }));
     }),
 
-    findUnique: jest.fn(async ({ where: { id } }: any) => db.classes.find((c) => c.id === id) ?? null),
+    findUnique: jest.fn(
+      async ({ where: { id } }: any) =>
+        db.classes.find((c) => c.id === id) ?? null
+    ),
 
     create: jest.fn(async ({ data }: any) => {
-      const newId = data.id ?? (db.classes.length ? Math.max(...db.classes.map((c) => c.id)) + 1 : 1);
+      const newId =
+        data.id ??
+        (db.classes.length ? Math.max(...db.classes.map((c) => c.id)) + 1 : 1);
       const row: GymClass = {
         id: newId,
         name: data.name,
@@ -101,6 +138,7 @@ export class PrismaClient {
         enrolled: data.enrolled ?? 0,
         createdById: data.createdById ?? db.CURRENT_USER_ID,
         users: Array.isArray(data.users) ? data.users.slice() : [],
+        sedeId: data.sedeId ?? 1,
       };
       if (!Array.isArray(row.users)) row.users = [];
       db.classes.push(row);
@@ -118,8 +156,14 @@ export class PrismaClient {
       if (data.date !== undefined) copy.date = new Date(data.date);
       if (data.time !== undefined) copy.time = data.time;
       if (data.capacity !== undefined) copy.capacity = data.capacity;
-      if (data.enrolled?.increment !== undefined) copy.enrolled = (copy.enrolled ?? 0) + Number(data.enrolled.increment || 0);
-      if (data.enrolled?.decrement !== undefined) copy.enrolled = Math.max(0, (copy.enrolled ?? 0) - Number(data.enrolled.decrement || 0));
+      if (data.enrolled?.increment !== undefined)
+        copy.enrolled =
+          (copy.enrolled ?? 0) + Number(data.enrolled.increment || 0);
+      if (data.enrolled?.decrement !== undefined)
+        copy.enrolled = Math.max(
+          0,
+          (copy.enrolled ?? 0) - Number(data.enrolled.decrement || 0)
+        );
 
       if (data.users !== undefined) {
         const u = data.users;
@@ -152,12 +196,18 @@ export class PrismaClient {
     findMany: jest.fn(async (args?: any) => {
       const rows = db.muscleGroups.map((mg) => ({ ...mg }));
       if (args?.include?.exercises) {
-        return rows.map((mg) => ({ ...mg, exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id) }));
+        return rows.map((mg) => ({
+          ...mg,
+          exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id),
+        }));
       }
       if (args?.include?._count) {
         return rows.map((mg) => ({
           ...mg,
-          _count: { exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id).length },
+          _count: {
+            exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id)
+              .length,
+          },
         }));
       }
       return rows;
@@ -167,8 +217,13 @@ export class PrismaClient {
       const mg = db.muscleGroups.find((x) => x.id === Number(id));
       if (!mg) return null;
       const base: any = { ...mg };
-      if (include?.exercises) base.exercises = db.exercises.filter((e) => e.muscleGroupId === mg.id);
-      if (include?._count) base._count = { exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id).length };
+      if (include?.exercises)
+        base.exercises = db.exercises.filter((e) => e.muscleGroupId === mg.id);
+      if (include?._count)
+        base._count = {
+          exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id)
+            .length,
+        };
       return base as any;
     }),
 
@@ -177,20 +232,34 @@ export class PrismaClient {
       const mg =
         db.muscleGroups.find((x) => {
           const byId = id !== undefined ? x.id === Number(id) : true;
-          const byName = name !== undefined ? x.name === (typeof name === "object" && name.equals ? name.equals : name) : true;
+          const byName =
+            name !== undefined
+              ? x.name ===
+                (typeof name === "object" && name.equals ? name.equals : name)
+              : true;
           return byId && byName;
         }) || null;
       if (!mg) return null;
       const base: any = { ...mg };
-      if (include?.exercises) base.exercises = db.exercises.filter((e) => e.muscleGroupId === mg.id);
-      if (include?._count) base._count = { exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id).length };
+      if (include?.exercises)
+        base.exercises = db.exercises.filter((e) => e.muscleGroupId === mg.id);
+      if (include?._count)
+        base._count = {
+          exercises: db.exercises.filter((e) => e.muscleGroupId === mg.id)
+            .length,
+        };
       return base as any;
     }),
 
     create: jest.fn(async ({ data }: any) => {
       const dup = db.muscleGroups.some((m) => ciEq(m.name, data?.name));
-      if (dup) throw new PrismaKnownRequestError("Unique constraint failed", "P2002", { target: ["name"] });
-      const newId = db.muscleGroups.length ? Math.max(...db.muscleGroups.map((mg) => mg.id)) + 1 : 1;
+      if (dup)
+        throw new PrismaKnownRequestError("Unique constraint failed", "P2002", {
+          target: ["name"],
+        });
+      const newId = db.muscleGroups.length
+        ? Math.max(...db.muscleGroups.map((mg) => mg.id)) + 1
+        : 1;
       const row: MuscleGroup = { id: newId, name: data.name };
       db.muscleGroups.push(row);
       return { ...row };
@@ -223,15 +292,25 @@ export class PrismaClient {
         rows = rows.filter((e) => set.has(e.id));
       }
       if (typeof where?.muscleGroupId === "number") {
-        rows = rows.filter((e) => e.muscleGroupId === Number(where.muscleGroupId));
+        rows = rows.filter(
+          (e) => e.muscleGroupId === Number(where.muscleGroupId)
+        );
       }
       return rows;
     }),
 
-    findUnique: jest.fn(async ({ where: { id } }: any) => db.exercises.find((e) => e.id === id)),
+    findUnique: jest.fn(async ({ where: { id } }: any) =>
+      db.exercises.find((e) => e.id === id)
+    ),
     create: jest.fn(async ({ data }: any) => {
-      const newId = db.exercises.length ? Math.max(...db.exercises.map((e) => e.id)) + 1 : 1;
-      const row: Exercise = { id: newId, name: data.name, muscleGroupId: data.muscleGroupId };
+      const newId = db.exercises.length
+        ? Math.max(...db.exercises.map((e) => e.id)) + 1
+        : 1;
+      const row: Exercise = {
+        id: newId,
+        name: data.name,
+        muscleGroupId: data.muscleGroupId,
+      };
       db.exercises.push(row);
       return { ...row };
     }),
@@ -241,7 +320,8 @@ export class PrismaClient {
       const curr = db.exercises[idx];
       const copy: Exercise = { ...curr };
       if (data.name !== undefined) copy.name = data.name;
-      if (data.muscleGroupId !== undefined) copy.muscleGroupId = data.muscleGroupId;
+      if (data.muscleGroupId !== undefined)
+        copy.muscleGroupId = data.muscleGroupId;
       db.exercises[idx] = copy;
       return { ...copy };
     }),
@@ -256,8 +336,13 @@ export class PrismaClient {
       let count = 0;
       const matches = (e: any) => {
         if (!where) return true;
-        if (typeof where.muscleGroupId === "number") return e.muscleGroupId === Number(where.muscleGroupId);
-        if (where.muscleGroupId && typeof where.muscleGroupId === "object" && "equals" in where.muscleGroupId)
+        if (typeof where.muscleGroupId === "number")
+          return e.muscleGroupId === Number(where.muscleGroupId);
+        if (
+          where.muscleGroupId &&
+          typeof where.muscleGroupId === "object" &&
+          "equals" in where.muscleGroupId
+        )
           return e.muscleGroupId === Number(where.muscleGroupId.equals);
         return true;
       };
@@ -266,7 +351,12 @@ export class PrismaClient {
         if (!matches(e)) return e;
         count++;
         const copy: any = { ...e };
-        if (data && typeof data.muscleGroupId === "object" && data.muscleGroupId !== null && "set" in data.muscleGroupId) {
+        if (
+          data &&
+          typeof data.muscleGroupId === "object" &&
+          data.muscleGroupId !== null &&
+          "set" in data.muscleGroupId
+        ) {
           copy.muscleGroupId = data.muscleGroupId.set as any;
         }
         return copy;
@@ -279,29 +369,38 @@ export class PrismaClient {
     findMany: jest.fn(async (args?: any) => {
       const rows = db.routines.map((r) => ({ ...r }));
       const withExercises = (r: any, include: any) => {
-        const rel = db.routineExercises.filter((re) => re.routineId === r.id).map((re) => {
-          const base: any = { ...re };
-          if (include?.include?.exercise) {
-            const ex = db.exercises.find((e) => e.id === re.exerciseId) || null;
-            if (ex && include.include.exercise?.include?.muscleGroup) {
-              const mg = db.muscleGroups.find((m) => m.id === ex.muscleGroupId) || null;
-              base.exercise = { ...ex, muscleGroup: mg };
-            } else {
-              base.exercise = ex;
+        const rel = db.routineExercises
+          .filter((re) => re.routineId === r.id)
+          .map((re) => {
+            const base: any = { ...re };
+            if (include?.include?.exercise) {
+              const ex =
+                db.exercises.find((e) => e.id === re.exerciseId) || null;
+              if (ex && include.include.exercise?.include?.muscleGroup) {
+                const mg =
+                  db.muscleGroups.find((m) => m.id === ex.muscleGroupId) ||
+                  null;
+                base.exercise = { ...ex, muscleGroup: mg };
+              } else {
+                base.exercise = ex;
+              }
             }
-          }
-          return base;
-        });
+            return base;
+          });
         return { ...r, exercises: rel };
       };
 
       let out: any[] = rows;
-      if (args?.include?.exercises) out = rows.map((r) => withExercises(r, args.include.exercises));
+      if (args?.include?.exercises)
+        out = rows.map((r) => withExercises(r, args.include.exercises));
       if (args?.include?._count) {
         out = out.map((r: any) => ({
           ...r,
           _count: {
-            exercises: (r.exercises ?? db.routineExercises.filter((re) => re.routineId === r.id)).length,
+            exercises: (
+              r.exercises ??
+              db.routineExercises.filter((re) => re.routineId === r.id)
+            ).length,
           },
         }));
       }
@@ -314,21 +413,30 @@ export class PrismaClient {
       let base: any = { ...r };
       if (include?.exercises) {
         const exInc = include.exercises;
-        base.exercises = db.routineExercises.filter((re) => re.routineId === r.id).map((re) => {
-          const row: any = { ...re };
-          if (exInc?.include?.exercise) {
-            const ex = db.exercises.find((e) => e.id === re.exerciseId) || null;
-            if (ex && exInc.include.exercise?.include?.muscleGroup) {
-              const mg = db.muscleGroups.find((m) => m.id === ex.muscleGroupId) || null;
-              row.exercise = { ...ex, muscleGroup: mg };
-            } else {
-              row.exercise = ex;
+        base.exercises = db.routineExercises
+          .filter((re) => re.routineId === r.id)
+          .map((re) => {
+            const row: any = { ...re };
+            if (exInc?.include?.exercise) {
+              const ex =
+                db.exercises.find((e) => e.id === re.exerciseId) || null;
+              if (ex && exInc.include.exercise?.include?.muscleGroup) {
+                const mg =
+                  db.muscleGroups.find((m) => m.id === ex.muscleGroupId) ||
+                  null;
+                row.exercise = { ...ex, muscleGroup: mg };
+              } else {
+                row.exercise = ex;
+              }
             }
-          }
-          return row;
-        });
+            return row;
+          });
       }
-      if (include?._count) base._count = { exercises: db.routineExercises.filter((re) => re.routineId === r.id).length };
+      if (include?._count)
+        base._count = {
+          exercises: db.routineExercises.filter((re) => re.routineId === r.id)
+            .length,
+        };
       return base;
     }),
 
@@ -337,7 +445,11 @@ export class PrismaClient {
       const r =
         db.routines.find((x) => {
           const byId = id !== undefined ? x.id === Number(id) : true;
-          const byName = name !== undefined ? x.name === (typeof name === "object" && name.equals ? name.equals : name) : true;
+          const byName =
+            name !== undefined
+              ? x.name ===
+                (typeof name === "object" && name.equals ? name.equals : name)
+              : true;
           return byId && byName;
         }) || null;
       if (!r) return null;
@@ -345,26 +457,37 @@ export class PrismaClient {
       let base: any = { ...r };
       if (include?.exercises) {
         const exInc = include.exercises;
-        base.exercises = db.routineExercises.filter((re) => re.routineId === r.id).map((re) => {
-          const row: any = { ...re };
-          if (exInc?.include?.exercise) {
-            const ex = db.exercises.find((e) => e.id === re.exerciseId) || null;
-            if (ex && exInc.include.exercise?.include?.muscleGroup) {
-              const mg = db.muscleGroups.find((m) => m.id === ex.muscleGroupId) || null;
-              row.exercise = { ...ex, muscleGroup: mg };
-            } else {
-              row.exercise = ex;
+        base.exercises = db.routineExercises
+          .filter((re) => re.routineId === r.id)
+          .map((re) => {
+            const row: any = { ...re };
+            if (exInc?.include?.exercise) {
+              const ex =
+                db.exercises.find((e) => e.id === re.exerciseId) || null;
+              if (ex && exInc.include.exercise?.include?.muscleGroup) {
+                const mg =
+                  db.muscleGroups.find((m) => m.id === ex.muscleGroupId) ||
+                  null;
+                row.exercise = { ...ex, muscleGroup: mg };
+              } else {
+                row.exercise = ex;
+              }
             }
-          }
-          return row;
-        });
+            return row;
+          });
       }
-      if (include?._count) base._count = { exercises: db.routineExercises.filter((re) => re.routineId === r.id).length };
+      if (include?._count)
+        base._count = {
+          exercises: db.routineExercises.filter((re) => re.routineId === r.id)
+            .length,
+        };
       return base;
     }),
 
     create: jest.fn(async ({ data }: any) => {
-      const newId = db.routines.length ? Math.max(...db.routines.map((r) => r.id)) + 1 : 1;
+      const newId = db.routines.length
+        ? Math.max(...db.routines.map((r) => r.id)) + 1
+        : 1;
       const row: Routine = {
         id: newId,
         name: data.name,
@@ -373,7 +496,8 @@ export class PrismaClient {
         duration: data.duration ?? null,
         icon: data.icon ?? null,
         users: Array.isArray(data.users) ? data.users.slice() : [],
-      } as any;
+        sedeId: data.sedeId ?? 1,
+      };
       db.routines.push(row);
       return { ...row };
     }),
@@ -411,7 +535,9 @@ export class PrismaClient {
       const idx = db.routines.findIndex((r) => r.id === Number(id));
       if (idx === -1) throw new Error("Routine not found");
       const deleted = db.routines.splice(idx, 1)[0];
-      db.routineExercises = db.routineExercises.filter((re) => re.routineId !== deleted.id);
+      db.routineExercises = db.routineExercises.filter(
+        (re) => re.routineId !== deleted.id
+      );
       return { ...deleted };
     }),
   };
@@ -421,7 +547,9 @@ export class PrismaClient {
       const items = Array.isArray(data) ? data : [data];
       let count = 0;
       for (const d of items) {
-        const newId = db.routineExercises.length ? Math.max(...db.routineExercises.map((x) => x.id)) + 1 : 1;
+        const newId = db.routineExercises.length
+          ? Math.max(...db.routineExercises.map((x) => x.id)) + 1
+          : 1;
         db.routineExercises.push({
           id: newId,
           routineId: Number(d.routineId),
@@ -437,8 +565,10 @@ export class PrismaClient {
 
     count: jest.fn(async ({ where }: any = {}) => {
       let rows = db.routineExercises.slice();
-      if (where?.routineId !== undefined) rows = rows.filter((re) => re.routineId === Number(where.routineId));
-      if (where?.exerciseId !== undefined) rows = rows.filter((re) => re.exerciseId === Number(where.exerciseId));
+      if (where?.routineId !== undefined)
+        rows = rows.filter((re) => re.routineId === Number(where.routineId));
+      if (where?.exerciseId !== undefined)
+        rows = rows.filter((re) => re.exerciseId === Number(where.exerciseId));
       if (where?.id?.in && Array.isArray(where.id.in)) {
         const set = new Set(where.id.in.map(Number));
         rows = rows.filter((re) => set.has(re.id));
@@ -449,15 +579,27 @@ export class PrismaClient {
     findMany: jest.fn(async (args?: any) => {
       let rows: any[] = db.routineExercises.map((re) => ({ ...re }));
       const where = args?.where || {};
-      if (where.routineId !== undefined) rows = rows.filter((re) => re.routineId === Number(where.routineId));
-      if (where.exerciseId !== undefined) rows = rows.filter((re) => re.exerciseId === Number(where.exerciseId));
-      if (args?.include?.exercise) rows = rows.map((re) => ({ ...re, exercise: db.exercises.find((e) => e.id === re.exerciseId) || null }));
-      if (args?.include?.routine) rows = rows.map((re) => ({ ...re, routine: db.routines.find((r) => r.id === re.routineId) || null }));
+      if (where.routineId !== undefined)
+        rows = rows.filter((re) => re.routineId === Number(where.routineId));
+      if (where.exerciseId !== undefined)
+        rows = rows.filter((re) => re.exerciseId === Number(where.exerciseId));
+      if (args?.include?.exercise)
+        rows = rows.map((re) => ({
+          ...re,
+          exercise: db.exercises.find((e) => e.id === re.exerciseId) || null,
+        }));
+      if (args?.include?.routine)
+        rows = rows.map((re) => ({
+          ...re,
+          routine: db.routines.find((r) => r.id === re.routineId) || null,
+        }));
       return rows;
     }),
 
     create: jest.fn(async ({ data, include }: any) => {
-      const newId = db.routineExercises.length ? Math.max(...db.routineExercises.map((x) => x.id)) + 1 : 1;
+      const newId = db.routineExercises.length
+        ? Math.max(...db.routineExercises.map((x) => x.id)) + 1
+        : 1;
       const row: RoutineExercise = {
         id: newId,
         routineId: data.routineId,
@@ -469,8 +611,11 @@ export class PrismaClient {
       db.routineExercises.push(row);
 
       const base: any = { ...row };
-      if (include?.exercise) base.exercise = db.exercises.find((e) => e.id === row.exerciseId) || null;
-      if (include?.routine) base.routine = db.routines.find((r) => r.id === row.routineId) || null;
+      if (include?.exercise)
+        base.exercise =
+          db.exercises.find((e) => e.id === row.exerciseId) || null;
+      if (include?.routine)
+        base.routine = db.routines.find((r) => r.id === row.routineId) || null;
       return base;
     }),
 
@@ -487,8 +632,11 @@ export class PrismaClient {
       db.routineExercises[idx] = copy;
 
       const base: any = { ...copy };
-      if (include?.exercise) base.exercise = db.exercises.find((e) => e.id === copy.exerciseId) || null;
-      if (include?.routine) base.routine = db.routines.find((r) => r.id === copy.routineId) || null;
+      if (include?.exercise)
+        base.exercise =
+          db.exercises.find((e) => e.id === copy.exerciseId) || null;
+      if (include?.routine)
+        base.routine = db.routines.find((r) => r.id === copy.routineId) || null;
       return base;
     }),
 
@@ -500,13 +648,16 @@ export class PrismaClient {
       const readPair = (obj: any) => {
         if (!obj) return;
         if (typeof obj.id !== "undefined") id = Number(obj.id);
-        if (typeof obj.routineId !== "undefined") routineId = Number(obj.routineId);
-        if (typeof obj.exerciseId !== "undefined") exerciseId = Number(obj.exerciseId);
+        if (typeof obj.routineId !== "undefined")
+          routineId = Number(obj.routineId);
+        if (typeof obj.exerciseId !== "undefined")
+          exerciseId = Number(obj.exerciseId);
       };
 
       if (where) {
         readPair(where);
-        if (Array.isArray(where.AND)) for (const cond of where.AND) readPair(cond);
+        if (Array.isArray(where.AND))
+          for (const cond of where.AND) readPair(cond);
         if (where.id_routineId) readPair(where.id_routineId);
         if (where.routineId_id) readPair(where.routineId_id);
         if (where.routineId_exerciseId) readPair(where.routineId_exerciseId);
@@ -514,8 +665,10 @@ export class PrismaClient {
 
       const idx = db.routineExercises.findIndex((re) => {
         const okId = typeof id === "number" ? re.id === id : true;
-        const okRoutine = typeof routineId === "number" ? re.routineId === routineId : true;
-        const okEx = typeof exerciseId === "number" ? re.exerciseId === exerciseId : true;
+        const okRoutine =
+          typeof routineId === "number" ? re.routineId === routineId : true;
+        const okEx =
+          typeof exerciseId === "number" ? re.exerciseId === exerciseId : true;
         return okId && okRoutine && okEx;
       });
 
@@ -528,8 +681,11 @@ export class PrismaClient {
       const re = db.routineExercises.find((x) => x.id === Number(id)) || null;
       if (!re) return null;
       const base: any = { ...re };
-      if (include?.exercise) base.exercise = db.exercises.find((e) => e.id === re.exerciseId) || null;
-      if (include?.routine) base.routine = db.routines.find((r) => r.id === re.routineId) || null;
+      if (include?.exercise)
+        base.exercise =
+          db.exercises.find((e) => e.id === re.exerciseId) || null;
+      if (include?.routine)
+        base.routine = db.routines.find((r) => r.id === re.routineId) || null;
       return base;
     }),
 
@@ -538,15 +694,22 @@ export class PrismaClient {
       const re =
         db.routineExercises.find((x) => {
           const byId = id !== undefined ? x.id === Number(id) : true;
-          const byRoutine = routineId !== undefined ? x.routineId === Number(routineId) : true;
-          const byExercise = exerciseId !== undefined ? x.exerciseId === Number(exerciseId) : true;
+          const byRoutine =
+            routineId !== undefined ? x.routineId === Number(routineId) : true;
+          const byExercise =
+            exerciseId !== undefined
+              ? x.exerciseId === Number(exerciseId)
+              : true;
           return byId && byRoutine && byExercise;
         }) || null;
 
       if (!re) return null;
       const base: any = { ...re };
-      if (include?.exercise) base.exercise = db.exercises.find((e) => e.id === re.exerciseId) || null;
-      if (include?.routine) base.routine = db.routines.find((r) => r.id === re.routineId) || null;
+      if (include?.exercise)
+        base.exercise =
+          db.exercises.find((e) => e.id === re.exerciseId) || null;
+      if (include?.routine)
+        base.routine = db.routines.find((r) => r.id === re.routineId) || null;
       return base;
     }),
 
@@ -554,13 +717,195 @@ export class PrismaClient {
       const before = db.routineExercises.length;
       db.routineExercises = db.routineExercises.filter((x) => {
         if (!where) return false;
-        if (where.routineId !== undefined) return x.routineId !== Number(where.routineId);
-        if (where.exerciseId !== undefined) return x.exerciseId !== Number(where.exerciseId);
-        if (where.id && where.id.in) return !where.id.in.map(Number).includes(x.id);
+        if (where.routineId !== undefined)
+          return x.routineId !== Number(where.routineId);
+        if (where.exerciseId !== undefined)
+          return x.exerciseId !== Number(where.exerciseId);
+        if (where.id && where.id.in)
+          return !where.id.in.map(Number).includes(x.id);
         return true;
       });
       const after = db.routineExercises.length;
       return { count: before - after };
+    }),
+  };
+
+  sede = {
+    findMany: jest.fn(async () => db.sedes.map((s) => ({ ...s }))),
+    findUnique: jest.fn(async ({ where: { id } }: any) => {
+      const sede = db.sedes.find((s) => s.id === Number(id));
+      return sede ? { ...sede } : null;
+    }),
+    create: jest.fn(async ({ data }: any) => {
+      const newId = db.sedes.length
+        ? Math.max(...db.sedes.map((s) => s.id)) + 1
+        : 1;
+      const row: Sede = {
+        id: newId,
+        name: data.name,
+        address: data.address,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        users: Array.isArray(data.users) ? data.users.slice() : [],
+      };
+      db.sedes.push(row);
+      return { ...row };
+    }),
+    update: jest.fn(async ({ where: { id }, data }: any) => {
+      const idx = db.sedes.findIndex((s) => s.id === Number(id));
+      if (idx === -1) throw new Error("Sede not found");
+      const curr = db.sedes[idx];
+      const copy: Sede = { ...curr };
+      if (data.name !== undefined) copy.name = data.name;
+      if (data.address !== undefined) copy.address = data.address;
+      if (data.latitude !== undefined) copy.latitude = data.latitude;
+      if (data.longitude !== undefined) copy.longitude = data.longitude;
+      if (data.users !== undefined) {
+        if (Array.isArray(data.users)) {
+          copy.users = data.users.slice();
+        }
+      }
+      db.sedes[idx] = copy;
+      return { ...copy };
+    }),
+    delete: jest.fn(async ({ where: { id } }: any) => {
+      const idx = db.sedes.findIndex((s) => s.id === Number(id));
+      if (idx === -1) throw new Error("Sede not found");
+      const deleted = db.sedes.splice(idx, 1)[0];
+      return { ...deleted };
+    }),
+  };
+
+  goal = {
+    findMany: jest.fn(async (args?: any) => {
+      let rows = db.goals.slice();
+      const where = args?.where || {};
+
+      if (typeof where.sedeId === "number") {
+        rows = rows.filter((g) => g.sedeId === Number(where.sedeId));
+      }
+
+      if (args?.include) {
+        return rows.map((g) => {
+          const result: any = { ...g };
+          if (args.include.targetClass) {
+            result.targetClass = g.targetClassId
+              ? db.classes.find((c) => c.id === g.targetClassId) || null
+              : null;
+          }
+          if (args.include.targetRoutine) {
+            result.targetRoutine = g.targetRoutineId
+              ? db.routines.find((r) => r.id === g.targetRoutineId) || null
+              : null;
+          }
+          return result;
+        });
+      }
+
+      return rows.map((g) => ({ ...g }));
+    }),
+
+    findUnique: jest.fn(async ({ where: { id }, include }: any) => {
+      const goal = db.goals.find((g) => g.id === Number(id));
+      if (!goal) return null;
+
+      const result: any = { ...goal };
+      if (include) {
+        if (include.targetClass) {
+          result.targetClass = goal.targetClassId
+            ? db.classes.find((c) => c.id === goal.targetClassId) || null
+            : null;
+        }
+        if (include.targetRoutine) {
+          result.targetRoutine = goal.targetRoutineId
+            ? db.routines.find((r) => r.id === goal.targetRoutineId) || null
+            : null;
+        }
+      }
+
+      return result;
+    }),
+
+    create: jest.fn(async ({ data, include }: any) => {
+      const newId = db.goals.length
+        ? Math.max(...db.goals.map((g) => g.id)) + 1
+        : 1;
+      const now = new Date();
+      const row: Goal = {
+        id: newId,
+        title: data.title,
+        description: data.description ?? null,
+        category: data.category,
+        targetValue: data.targetValue,
+        currentValue: data.currentValue ?? 0,
+        startDate: data.startDate ? new Date(data.startDate) : now,
+        endDate: new Date(data.endDate),
+        sedeId: data.sedeId,
+        targetClassId: data.targetClassId ?? null,
+        targetRoutineId: data.targetRoutineId ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.goals.push(row);
+
+      const result: any = { ...row };
+      if (include) {
+        if (include.targetClass) {
+          result.targetClass = row.targetClassId
+            ? db.classes.find((c) => c.id === row.targetClassId) || null
+            : null;
+        }
+        if (include.targetRoutine) {
+          result.targetRoutine = row.targetRoutineId
+            ? db.routines.find((r) => r.id === row.targetRoutineId) || null
+            : null;
+        }
+      }
+
+      return result;
+    }),
+
+    update: jest.fn(async ({ where: { id }, data, include }: any) => {
+      const idx = db.goals.findIndex((g) => g.id === Number(id));
+      if (idx === -1) throw new Error("Goal not found");
+      const curr = db.goals[idx];
+      const copy: Goal = { ...curr, updatedAt: new Date() };
+
+      if (data.title !== undefined) copy.title = data.title;
+      if (data.description !== undefined) copy.description = data.description;
+      if (data.targetValue !== undefined) copy.targetValue = data.targetValue;
+      if (data.endDate !== undefined) copy.endDate = new Date(data.endDate);
+      if (data.targetClassId !== undefined)
+        copy.targetClassId = data.targetClassId;
+      if (data.targetRoutineId !== undefined)
+        copy.targetRoutineId = data.targetRoutineId;
+      if (data.currentValue !== undefined)
+        copy.currentValue = data.currentValue;
+
+      db.goals[idx] = copy;
+
+      const result: any = { ...copy };
+      if (include) {
+        if (include.targetClass) {
+          result.targetClass = copy.targetClassId
+            ? db.classes.find((c) => c.id === copy.targetClassId) || null
+            : null;
+        }
+        if (include.targetRoutine) {
+          result.targetRoutine = copy.targetRoutineId
+            ? db.routines.find((r) => r.id === copy.targetRoutineId) || null
+            : null;
+        }
+      }
+
+      return result;
+    }),
+
+    delete: jest.fn(async ({ where: { id } }: any) => {
+      const idx = db.goals.findIndex((g) => g.id === Number(id));
+      if (idx === -1) throw new Error("Goal not found");
+      const deleted = db.goals.splice(idx, 1)[0];
+      return { ...deleted };
     }),
   };
 }
