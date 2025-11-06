@@ -11,8 +11,16 @@ router.get(
   "/",
   asyncHandler(async (_req: Request, res: Response) => {
     try {
-      const users = await UserService.getUsers();
-      const sanitizedUsers = users.data.map((user: User) =>
+      const sedeId = Number(_req.query.sedeId);
+
+      let users: User[] = [];
+      if (sedeId) {
+        users = await UserService.getUsersBySedeId(sedeId);
+      } else {
+        const usersResponse = await UserService.getUsers();
+        users = usersResponse.data;
+      }
+      const sanitizedUsers = users.map((user: User) =>
         UserService.sanitizeUser(user)
       );
       res.json({

@@ -16,6 +16,7 @@ class UserService {
   async getUserById(userId: string) {
     try {
       const user = await clerkClient.users.getUser(userId);
+
       return this.sanitizeUser(user);
     } catch (error: any) {
       if (error?.message === "Not Found") {
@@ -25,6 +26,13 @@ class UserService {
     }
   }
 
+  async getUsersBySedeId(sedeId: number) {
+    const users = await clerkClient.users.getUserList({ limit: 100 });
+    const filteredUsers = users.data.filter(
+      (user) => user.publicMetadata.sede === sedeId
+    );
+    return filteredUsers;
+  }
   async updateUserRole(userId: string, role: string) {
     if (role !== "admin" && role !== "user") {
       throw new ApiValidationError("Invalid role", 400);
@@ -54,7 +62,7 @@ class UserService {
     });
   }
 
-  async getDailyUserCount() {
+  async getDailyUserCount(sedeId: number) {
     const dailyUserCount = await this.prisma.dailyUserCount.findMany({
       orderBy: {
         date: "desc",
@@ -63,16 +71,21 @@ class UserService {
         date: {
           lt: new Date(new Date().setHours(0, 0, 0, 0)),
         },
+        sedeId,
       },
       take: 90,
     });
 
     const users = await this.getUsers();
     const basic = users.data.filter(
-      (user) => user.publicMetadata.plan === "basic"
+      (user) =>
+        user.publicMetadata.plan === "basic" &&
+        user.publicMetadata.sede === sedeId
     ).length;
     const premium = users.data.filter(
-      (user) => user.publicMetadata.plan === "premium"
+      (user) =>
+        user.publicMetadata.plan === "premium" &&
+        user.publicMetadata.sede === sedeId
     ).length;
 
     return [
@@ -94,6 +107,7 @@ class UserService {
       createdAt: user.createdAt,
       role: user.publicMetadata.role as string,
       plan: user.publicMetadata.plan as string,
+      sedeId: user.publicMetadata.sede as number,
     };
   }
 }

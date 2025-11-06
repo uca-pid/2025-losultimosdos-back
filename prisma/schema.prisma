@@ -18,6 +18,8 @@ model Class {
   enrolled        Int      @default(0)
   createdById     String  
   users           String[] @default([])
+  sedeId          Int
+  sede            Sede   @relation(fields: [sedeId], references: [id])
 }
 
 model MuscleGroup {
@@ -25,7 +27,6 @@ model MuscleGroup {
   name      String     @unique
   exercises Exercise[]
 }
-
 
 
 model Exercise {
@@ -48,6 +49,8 @@ model Routine {
   icon        String?
   exercises   RoutineExercise[]
   users       String[] @default([])
+  sedeId      Int
+  sede        Sede   @relation(fields: [sedeId], references: [id])
 }
 
 model RoutineExercise {
@@ -78,4 +81,21 @@ model DailyUserCount {
   date      DateTime
   basic Int @default(0)
   premium Int @default(0)
+  sedeId Int @default(1)
+  sede Sede @relation(fields: [sedeId], references: [id])
+}
+
+
+model Sede {
+  id Int @id @default(autoincrement())
+  name String
+  address String
+  latitude Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  classes   Class[]
+  users     String[] @default([])
+  routines  Routine[]
+  dailyUserCount DailyUserCount[]
 }

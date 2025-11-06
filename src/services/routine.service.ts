@@ -13,8 +13,9 @@ class RoutineService {
   constructor() {
     this.prisma = new PrismaClient();
   }
-  list() {
+  list(sedeId: number) {
     return this.prisma.routine.findMany({
+      where: { sedeId },
       include: {
         exercises: {
           include: { exercise: { include: { muscleGroup: true } } },
@@ -23,15 +24,20 @@ class RoutineService {
     });
   }
   async listNamesWithUsersCount(): Promise<
-    { name: string; usersCount: number }[]
+    { name: string; usersCount: number; sede: { id: number; name: string } }[]
   > {
     const rows = await this.prisma.routine.findMany({
-      select: { name: true, users: true },
+      select: {
+        name: true,
+        users: true,
+        sede: { select: { id: true, name: true } },
+      },
       orderBy: { name: "asc" },
     });
     return rows.map((r) => ({
       name: r.name,
       usersCount: r.users?.length ?? 0,
+      sede: { id: r.sede.id, name: r.sede.name },
     }));
   }
 
@@ -58,6 +64,7 @@ class RoutineService {
         level: data.level,
         duration: data.duration,
         icon: data.icon,
+        sedeId: data.sedeId,
       },
     });
 
@@ -266,9 +273,9 @@ class RoutineService {
       where: { users: { has: userId } },
     });
   }
-  async listNamesWithUsersCountSQL(): Promise<
-    { name: string; usersCount: number }[]
-  > {
+  async listNamesWithUsersCountSQL(
+    sedeId: number
+  ): Promise<{ name: string; usersCount: number }[]> {
     const rows = await this.prisma.$queryRaw<
       { name: string; users_count: number }[]
     >`
