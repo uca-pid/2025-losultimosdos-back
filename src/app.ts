@@ -34,7 +34,7 @@ app.post(
 
         try {
           await clerkClient.users.updateUser(id, {
-            publicMetadata: { role: "user", plan: "basic" },
+            publicMetadata: { role: "user", plan: "basic", sede: "1" },
           });
           console.log(`User ${id} assigned role: user`);
           res

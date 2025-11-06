@@ -91,4 +91,17 @@ router.put(
   })
 );
 
+router.put(
+  "/:userId/sede",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { sedeId } = req.body;
+    const user = await UserService.updateUserSede(userId, sedeId);
+    res.json({
+      message: "User sede updated successfully",
+      user: UserService.sanitizeUser(user),
+    });
+  })
+);
+
 export default router;

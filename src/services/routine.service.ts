@@ -273,21 +273,6 @@ class RoutineService {
       where: { users: { has: userId } },
     });
   }
-  async listNamesWithUsersCountSQL(
-    sedeId: number
-  ): Promise<{ name: string; usersCount: number }[]> {
-    const rows = await this.prisma.$queryRaw<
-      { name: string; users_count: number }[]
-    >`
-      SELECT "name", COALESCE(cardinality("users"), 0) AS users_count
-      FROM "Routine"
-      ORDER BY "name" ASC
-    `;
-    return rows.map((r) => ({
-      name: r.name,
-      usersCount: Number(r.users_count),
-    }));
-  }
 }
 
 export default new RoutineService();

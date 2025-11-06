@@ -1,6 +1,8 @@
 import { clerkClient, User } from "@clerk/express";
 import { ApiValidationError } from "./api-validation-error";
 import { PrismaClient } from "@prisma/client";
+import ClassService from "./class.service";
+import RoutineService from "./routine.service";
 
 class UserService {
   private readonly prisma: PrismaClient;
@@ -109,6 +111,19 @@ class UserService {
       plan: user.publicMetadata.plan as string,
       sedeId: user.publicMetadata.sede as number,
     };
+  }
+  async updateUserSede(userId: string, sedeId: number) {
+    const user = await clerkClient.users.getUser(userId);
+
+    const classes = await ClassService.getClassByUserId(userId);
+    const routines = await RoutineService.getByUserId(userId);
+    if (classes.length > 0 || routines.length > 0) {
+      throw new ApiValidationError("User has classes or routines", 400);
+    }
+
+    return await clerkClient.users.updateUser(userId, {
+      publicMetadata: { ...user.publicMetadata, sede: sedeId },
+    });
   }
 }
 
