@@ -20,6 +20,7 @@ model Class {
   users           String[] @default([])
   sedeId          Int
   sede            Sede   @relation(fields: [sedeId], references: [id])
+  goals           Goal[]
 }
 
 model MuscleGroup {
@@ -51,6 +52,7 @@ model Routine {
   users       String[] @default([])
   sedeId      Int
   sede        Sede   @relation(fields: [sedeId], references: [id])
+  goals       Goal[]
 }
 
 model RoutineExercise {
@@ -98,4 +100,30 @@ model Sede {
   users     String[] @default([])
   routines  Routine[]
   dailyUserCount DailyUserCount[]
+  goals     Goal[]
+}
+
+enum GoalCategory {
+  USER_REGISTRATIONS
+  CLASS_ENROLLMENTS
+  ROUTINE_ASSIGNMENTS
+}
+
+model Goal {
+  id              Int          @id @default(autoincrement())
+  title           String
+  description     String?
+  category        GoalCategory
+  targetValue     Int
+  currentValue    Int          @default(0)
+  startDate       DateTime     @default(now())
+  endDate         DateTime
+  sedeId          Int
+  sede            Sede         @relation(fields: [sedeId], references: [id], onDelete: Cascade)
+  targetClassId   Int?
+  targetClass     Class?       @relation(fields: [targetClassId], references: [id], onDelete: SetNull)
+  targetRoutineId Int?
+  targetRoutine   Routine?     @relation(fields: [targetRoutineId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }

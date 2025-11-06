@@ -5,6 +5,7 @@ import userRoutes from "./users";
 import muscleGroupRoutes from "./muscle-group";
 import excersicesRoutes from "./excersices";
 import routinesRoutes from "./routines";
+import goalsRoutes from "./goals";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { validateBody } from "../../middleware/validation";
 import { sedeCreateSchema } from "../../schemas/sede.schema";
@@ -37,5 +38,6 @@ router.use("/users", userRoutes);
 router.use("/muscle-group", muscleGroupRoutes);
 router.use("/exercises", excersicesRoutes);
 router.use("/routines", routinesRoutes);
+router.use("/goals", goalsRoutes);
 
 export default router;
