@@ -1,30 +1,21 @@
-# Use Node.js LTS version
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Install nodemon globally
-RUN npm install -g nodemon
-
-# Copy package files
+# Copy package.json first for caching
 COPY package*.json ./
 
-# Install dependencies (including dev dependencies for development)
+# Install only prod deps
 RUN npm install
 
-# Copy prisma schema
+# Copy prisma and generate client
 COPY prisma ./prisma/
-
-# Generate Prisma Client
 RUN npx prisma generate
 
-# Copy the rest of the application
+# Copy the entire project
 COPY . .
 
-# Expose the port the app runs on
-ENV PORT=8080
+# Build TypeScript → creates /app/dist                                                                                                              RUN npm run build
+                                                                                                                                                    ENV PORT=8080
 EXPOSE 8080
-
-# Command to run the application (will be overridden by docker-compose for development)
-CMD ["npm", "start"]
+CMD ["node", "dist/app.js"]

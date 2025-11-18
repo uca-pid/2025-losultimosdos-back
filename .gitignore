@@ -27,3 +27,5 @@ github-*.zip
 .env
 
 coverage/
+
+dist/

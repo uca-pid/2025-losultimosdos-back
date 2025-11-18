@@ -1,37 +1,16 @@
-version: "3.9"
-
 services:
   app:
-    build: .
-    ports:
-      - "8080:8080"
+    build: .                                                                                                                                            ports:
+      - "4001:4001"
     env_file:
       - .env
-    volumes:
-      - ./src:/app/src
-      - /app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && ts-node src/app.ts"
+    command: sh -c "npx prisma migrate deploy && node dist/app.js"
+    networks:
+      - servicios_default
 
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+networks:
+  servicios_default:
+    external: true
 
-volumes:
-  postgres_data:
+volumes: {}

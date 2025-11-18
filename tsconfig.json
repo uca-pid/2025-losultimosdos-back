@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "types": ["jest", "node"],
-   "target": "ES2020",
+    "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "./dist",
