@@ -1,6 +1,7 @@
 services:
   app:
-    build: .                                                                                                                                            ports:
+    build: .
+    ports:
       - "4001:4001"
     env_file:
       - .env
@@ -12,5 +13,3 @@ services:
 networks:
   servicios_default:
     external: true
-
-volumes: {}
