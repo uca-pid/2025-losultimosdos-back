@@ -1,14 +1,22 @@
 import express, { Request, Response, NextFunction } from "express";
 import cron from "node-cron";
 import { asyncHandler } from "./middleware/asyncHandler";
+import validateApiKey from "./middleware/api-key-auth";
 import cors from "cors";
 import dotenv from "dotenv";
-import { clerkClient, clerkMiddleware } from "@clerk/express";
+import rateLimit from "express-rate-limit";
+import {
+  clerkClient,
+  clerkMiddleware,
+  getAuth,
+  requireAuth,
+} from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
 import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
+import apiKeyRoutes from "./routes/api-keys";
 import ClassService from "./services/class.service";
 import { ApiValidationError } from "./services/api-validation-error";
 import ExerciseService from "./services/excersice.service";
@@ -20,6 +28,18 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 const app = express();
+
+const checkIsAuthenticated = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+};
 
 app.post(
   "/api/webhooks",
@@ -77,9 +97,9 @@ cron.schedule("0 0 * * *", async () => {
       },
     });
 
-    console.log("✅ User count saved:", basic, premium);
+    console.log(" User count saved:", basic, premium);
   } catch (err) {
-    console.error("❌ Error saving user count:", err);
+    console.error("Error saving user count:", err);
   }
 });
 
@@ -93,14 +113,48 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(clerkMiddleware());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-app.use("/admin", adminRoutes);
-app.use("/user", userRoutes);
+app.use(limiter);
+
+app.post(
+  "/isUser",
+  validateApiKey,
+  asyncHandler(async (req: Request, res: Response) => {
+    const body = req.body as { mail: string };
+    if (!body.mail) {
+      return res.status(400).json({ error: "Mail is required" });
+    }
+    const users = await clerkClient.users.getUserList({
+      emailAddress: [body.mail],
+    });
+
+    if (users.data.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = users.data[0];
+    res.status(200).json({ isUser: user.publicMetadata.role === "user" });
+  })
+);
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.use(clerkMiddleware());
+
+// app.use(checkIsAuthenticated);
+
+app.use("/admin", adminRoutes);
+app.use("/user", userRoutes);
+app.use("/api-keys", apiKeyRoutes);
 
 app.get(
   "/classes",
