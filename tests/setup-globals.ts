@@ -59,6 +59,16 @@ type Goal = {
   updatedAt: Date;
 };
 
+type ApiKey = {
+  id: string;
+  userId: string;
+  keyHash: string;
+  isActive: boolean;
+  createdAt: Date;
+  lastUsed: Date | null;
+  updatedAt: Date;
+};
+
 const G = globalThis as any;
 G.__TEST_DB__ ??= {
   classes: [] as GymClass[],
@@ -68,6 +78,7 @@ G.__TEST_DB__ ??= {
   routineExercises: [] as RoutineExercise[],
   sedes: [] as Sede[],
   goals: [] as Goal[],
+  apiKeys: [] as ApiKey[],
   CURRENT_USER_ID: "user_test_id",
   CURRENT_ROLE: "user",
 };
@@ -76,7 +87,7 @@ const db = G.__TEST_DB__;
 declare global {
   var __seedClasses__: (rows: GymClass[]) => void;
   var __resetClasses__: () => void;
-  var __setRole__: (role: "user" | "admin") => void;
+  var __setRole__: (role: "user" | "admin" | "medibook") => void;
   var __setUserId__: (id: string) => void;
   var __seedMuscleGroups__: (rows: MuscleGroup[]) => void;
   var __resetMuscleGroups__: () => void;
@@ -90,6 +101,8 @@ declare global {
   var __resetSedes__: () => void;
   var __seedGoals__: (rows: Goal[]) => void;
   var __resetGoals__: () => void;
+  var __seedApiKeys__: (rows: ApiKey[]) => void;
+  var __resetApiKeys__: () => void;
 }
 
 global.__seedMuscleGroups__ = (rows: MuscleGroup[]) => {
@@ -129,7 +142,7 @@ global.__resetClasses__ = () => {
   db.classes = [];
 };
 
-global.__setRole__ = (role: "user" | "admin") => {
+global.__setRole__ = (role: "user" | "admin" | "medibook") => {
   db.CURRENT_ROLE = role;
 };
 global.__setUserId__ = (id: string) => {
@@ -157,6 +170,18 @@ global.__seedGoals__ = (rows: Goal[]) => {
 };
 global.__resetGoals__ = () => {
   db.goals = [];
+};
+
+global.__seedApiKeys__ = (rows: ApiKey[]) => {
+  db.apiKeys = rows.map((r) => ({
+    ...r,
+    createdAt: new Date(r.createdAt),
+    lastUsed: r.lastUsed ? new Date(r.lastUsed) : null,
+    updatedAt: new Date(r.updatedAt),
+  }));
+};
+global.__resetApiKeys__ = () => {
+  db.apiKeys = [];
 };
 
 beforeAll(() => {

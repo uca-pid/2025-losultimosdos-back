@@ -58,6 +58,16 @@ type Goal = {
   updatedAt: Date;
 };
 
+type ApiKey = {
+  id: string;
+  userId: string;
+  keyHash: string;
+  isActive: boolean;
+  createdAt: Date;
+  lastUsed: Date | null;
+  updatedAt: Date;
+};
+
 interface TestDB {
   classes: GymClass[];
   muscleGroups: MuscleGroup[];
@@ -66,8 +76,9 @@ interface TestDB {
   routineExercises: RoutineExercise[];
   sedes: Sede[];
   goals: Goal[];
+  apiKeys: ApiKey[];
   CURRENT_USER_ID: string;
-  CURRENT_ROLE: "user" | "admin";
+  CURRENT_ROLE: "user" | "admin" | "medibook";
 }
 
 const G = globalThis as any;
@@ -80,6 +91,7 @@ if (!G.__TEST_DB__) {
     routineExercises: [],
     sedes: [],
     goals: [],
+    apiKeys: [],
     CURRENT_USER_ID: "user_test_id",
     CURRENT_ROLE: "user",
   };
@@ -905,6 +917,75 @@ export class PrismaClient {
       const idx = db.goals.findIndex((g) => g.id === Number(id));
       if (idx === -1) throw new Error("Goal not found");
       const deleted = db.goals.splice(idx, 1)[0];
+      return { ...deleted };
+    }),
+  };
+
+  apiKey = {
+    findMany: jest.fn(async (args?: any) => {
+      let rows = db.apiKeys.slice();
+      const where = args?.where || {};
+
+      if (typeof where.isActive === "boolean") {
+        rows = rows.filter((k) => k.isActive === where.isActive);
+      }
+
+      return rows.map((k) => ({ ...k }));
+    }),
+
+    findUnique: jest.fn(async ({ where }: any) => {
+      const { id, userId } = where;
+      const apiKey = db.apiKeys.find((k) => {
+        if (id) return k.id === id;
+        if (userId) return k.userId === userId;
+        return false;
+      });
+      return apiKey ? { ...apiKey } : null;
+    }),
+
+    create: jest.fn(async ({ data }: any) => {
+      // Check for duplicate userId
+      const existing = db.apiKeys.find((k) => k.userId === data.userId);
+      if (existing) {
+        throw new PrismaKnownRequestError(
+          "Unique constraint failed on the fields: (`userId`)",
+          "P2002",
+          { target: ["userId"] }
+        );
+      }
+
+      const now = new Date();
+      const row: ApiKey = {
+        id: data.id || `api-key-${Date.now()}`,
+        userId: data.userId,
+        keyHash: data.keyHash,
+        isActive: data.isActive ?? true,
+        createdAt: now,
+        lastUsed: data.lastUsed ?? null,
+        updatedAt: now,
+      };
+      db.apiKeys.push(row);
+      return { ...row };
+    }),
+
+    update: jest.fn(async ({ where: { id }, data }: any) => {
+      const idx = db.apiKeys.findIndex((k) => k.id === id);
+      if (idx === -1) throw new Error("ApiKey not found");
+      const curr = db.apiKeys[idx];
+      const copy: ApiKey = { ...curr, updatedAt: new Date() };
+
+      if (data.keyHash !== undefined) copy.keyHash = data.keyHash;
+      if (data.isActive !== undefined) copy.isActive = data.isActive;
+      if (data.lastUsed !== undefined) copy.lastUsed = data.lastUsed;
+
+      db.apiKeys[idx] = copy;
+      return { ...copy };
+    }),
+
+    delete: jest.fn(async ({ where: { id } }: any) => {
+      const idx = db.apiKeys.findIndex((k) => k.id === id);
+      if (idx === -1) throw new Error("ApiKey not found");
+      const deleted = db.apiKeys.splice(idx, 1)[0];
       return { ...deleted };
     }),
   };
