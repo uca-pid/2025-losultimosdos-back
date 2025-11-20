@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 
@@ -101,6 +101,7 @@ model Sede {
   routines  Routine[]
   dailyUserCount DailyUserCount[]
   goals     Goal[]
+  points    PointEvent[]
 }
 
 enum GoalCategory {
@@ -139,4 +140,23 @@ model ApiKey {
 
   @@index([userId])
   @@index([keyHash])
+}
+
+enum PointEventType {
+  CLASS_ENROLL
+  ROUTINE_ASSIGN
+  ROUTINE_COMPLETE
+}
+
+model PointEvent {
+  id        Int            @id @default(autoincrement())
+  userId    String
+  sedeId    Int
+  type      PointEventType
+  points    Int
+  classId   Int?
+  routineId Int?
+  createdAt DateTime       @default(now())
+
+  sede      Sede           @relation(fields: [sedeId], references: [id])
 }

@@ -1,6 +1,9 @@
 import { Class, PrismaClient } from "@prisma/client";
 import { ApiValidationError } from "./api-validation-error";
 import UserService from "./user.service";
+import PointsService from "./points.service";
+import { PointEventType } from "@prisma/client";
+
 
 class ClassService {
   private readonly prisma: PrismaClient;
@@ -68,7 +71,7 @@ class ClassService {
     return this.prisma.class.delete({ where: { id } });
   }
 
-  async enrollClass(userId: string, classId: number) {
+ async enrollClass(userId: string, classId: number) {
     const [classData, user] = await Promise.all([
       this.getClassById(classId),
       UserService.getUserById(userId),
@@ -94,10 +97,20 @@ class ClassService {
       }
     }
 
-    return this.prisma.class.update({
+    const updatedClass = await this.prisma.class.update({
       where: { id: classId },
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
+
+    // 🎯 Registrar puntos por inscripción a clase
+    await PointsService.registerEvent({
+      userId,
+      sedeId: updatedClass.sedeId,
+      type: PointEventType.CLASS_ENROLL,
+      classId: updatedClass.id,
+    });
+
+    return updatedClass;
   }
 
   async unenrollClass(userId: string, classId: number) {

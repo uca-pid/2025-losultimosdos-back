@@ -25,6 +25,8 @@ import { validateParams } from "./middleware/validation";
 import { routineIdParamSchema } from "./schemas/routine.schema";
 import UserService from "./services/user.service";
 dotenv.config();
+import PointsService from "./services/points.service";
+
 
 const prisma = new PrismaClient();
 const app = express();
@@ -292,6 +294,30 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     });
   }
 });
+app.get(
+  "/leaderboard/users",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+    const sedeId = req.query.sedeId
+      ? Number(req.query.sedeId as string)
+      : undefined;
+
+    const items = await PointsService.userLeaderboard({ period, sedeId });
+
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/leaderboard/sedes",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+
+    const items = await PointsService.sedeLeaderboard({ period });
+
+    res.json({ total: items.length, items });
+  })
+);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Route not found" });
