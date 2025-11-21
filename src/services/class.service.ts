@@ -71,7 +71,7 @@ class ClassService {
     return this.prisma.class.delete({ where: { id } });
   }
 
- async enrollClass(userId: string, classId: number) {
+  async enrollClass(userId: string, classId: number) {
     const [classData, user] = await Promise.all([
       this.getClassById(classId),
       UserService.getUserById(userId),
@@ -97,23 +97,23 @@ class ClassService {
       }
     }
 
-    const updatedClass = await this.prisma.class.update({
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
 
-    // 🎯 Registrar puntos por inscripción a clase
+    // 🎯 Gamificación: sumar puntos por inscribirse
     await PointsService.registerEvent({
       userId,
-      sedeId: updatedClass.sedeId,
+      sedeId: updated.sedeId,
       type: PointEventType.CLASS_ENROLL,
-      classId: updatedClass.id,
+      classId: updated.id,
     });
 
-    return updatedClass;
+    return updated;
   }
 
-  async unenrollClass(userId: string, classId: number) {
+ async unenrollClass(userId: string, classId: number) {
     const classData = await this.getClassById(classId);
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
@@ -123,14 +123,30 @@ class ClassService {
       throw new ApiValidationError("Not enrolled in this class", 400);
     }
     const newUsers = classData.users.filter((user) => user !== userId);
-    return this.prisma.class.update({
+
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: {
         users: { set: newUsers },
         enrolled: wasEnrolled ? { decrement: 1 } : undefined,
       },
     });
+
+    // 🎯 Gamificación: penalizar al usuario por desinscribirse
+    const base = PointsService.getBasePoints(PointEventType.CLASS_ENROLL);
+    const penalty = -base;
+
+    await PointsService.registerEvent({
+      userId,
+      sedeId: updated.sedeId,
+      type: PointEventType.CLASS_ENROLL,
+      classId: updated.id,
+      customPoints: penalty,
+    });
+
+    return updated;
   }
+
   async listNamesWithEnrollCount(
     upcoming = false
   ): Promise<
