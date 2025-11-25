@@ -9,6 +9,10 @@ import ClassService from "../../services/class.service";
 import UserService from "../../services/user.service";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import RoutineService from "../../services/routine.service";
+import BadgeService from "../../services/badge.service";
+
+
+
 
 const router = Router();
 
@@ -59,6 +63,42 @@ router.get(
     res.json({ classes });
   })
 );
+
+
+router.get(
+  "/badges",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
+
+    const user = await UserService.getUserById(userId);
+    const badges = await BadgeService.getUserBadges(userId, user.sedeId);
+
+    res.json({ items: badges });
+  })
+);
+
+// NUEVO: evalúa, actualiza y devuelve SOLO los recién desbloqueados
+router.post(
+  "/badges/evaluate",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
+
+    const user = await UserService.getUserById(userId);
+    const newlyEarnedBadges = await BadgeService.evaluateAndReturnNew(
+      userId,
+      user.sedeId
+    );
+
+    res.json({ items: newlyEarnedBadges });
+  })
+);
+
 
 router.get(
   "/routines",

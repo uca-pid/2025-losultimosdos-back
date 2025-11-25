@@ -3,8 +3,7 @@ import { ApiValidationError } from "./api-validation-error";
 import UserService from "./user.service";
 import PointsService from "./points.service";
 import { PointEventType } from "@prisma/client";
-
-
+import BadgeService from "./badge.service";
 class ClassService {
   private readonly prisma: PrismaClient;
   constructor() {
@@ -71,6 +70,7 @@ class ClassService {
     return this.prisma.class.delete({ where: { id } });
   }
 
+
   async enrollClass(userId: string, classId: number) {
     const [classData, user] = await Promise.all([
       this.getClassById(classId),
@@ -113,7 +113,7 @@ class ClassService {
     return updated;
   }
 
- async unenrollClass(userId: string, classId: number) {
+  async unenrollClass(userId: string, classId: number) {
     const classData = await this.getClassById(classId);
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
@@ -132,18 +132,9 @@ class ClassService {
       },
     });
 
-    // 🎯 Gamificación: penalizar al usuario por desinscribirse
-    const base = PointsService.getBasePoints(PointEventType.CLASS_ENROLL);
-    const penalty = -base;
+    await PointsService.removeClassEnrollEvent(userId, classId);
 
-    await PointsService.registerEvent({
-      userId,
-      sedeId: updated.sedeId,
-      type: PointEventType.CLASS_ENROLL,
-      classId: updated.id,
-      customPoints: penalty,
-    });
-
+    await BadgeService.evaluateForUser(userId, classData.sedeId);
     return updated;
   }
 

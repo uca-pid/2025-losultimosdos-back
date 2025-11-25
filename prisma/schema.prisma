@@ -175,3 +175,35 @@ model ExercisePerformance {
   @@index([userId, exerciseId])
   @@index([userId, routineId])
 }
+
+enum BadgeMetric {
+  TOTAL_POINTS
+  CLASS_ENROLL_COUNT
+  ROUTINE_COMPLETE_COUNT
+}
+
+model Badge {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique
+  name        String
+  description String?
+  icon        String?     
+  metric      BadgeMetric
+  threshold   Int         
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id        Int      @id @default(autoincrement())
+  badgeId   Int
+  userId    String   
+  earnedAt  DateTime @default(now())
+
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+
+  @@unique([badgeId, userId]) 
+}

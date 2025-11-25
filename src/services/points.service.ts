@@ -1,5 +1,7 @@
 import { PrismaClient, PointEventType, Prisma } from "@prisma/client";
 import UserService from "./user.service";
+import BadgeService from "./badge.service";
+
 type Period = "all" | "30d" | "7d";
 
 class PointsService {
@@ -51,6 +53,21 @@ class PointsService {
         routineId,
       },
     });
+    const event = await this.prisma.pointEvent.create({
+      data: {
+        userId,
+        sedeId,
+        type,
+        points,
+        classId,
+        routineId,
+      },
+    });
+
+    // 👇 después de registrar el evento, evaluamos logros
+    await BadgeService.evaluateForUser(userId, sedeId);
+
+    return event;
   }
 
   private buildWhere(
@@ -74,7 +91,7 @@ class PointsService {
   }
 
   // 🧍🏻 leaderboard por usuario
-    // 🧍🏻 leaderboard por usuario
+  // 🧍🏻 leaderboard por usuario
   async userLeaderboard(options?: {
     period?: Period;
     sedeId?: number;
@@ -155,8 +172,15 @@ class PointsService {
       };
     });
   }
-
-
+  async removeClassEnrollEvent(userId: string, classId: number) {
+    return this.prisma.pointEvent.deleteMany({
+      where: {
+        userId,
+        classId,
+        type: "CLASS_ENROLL",
+      },
+    });
+  }
   // 🏢 leaderboard por sede
   async sedeLeaderboard(options?: { period?: Period; limit?: number }) {
     const period = options?.period ?? "all";
