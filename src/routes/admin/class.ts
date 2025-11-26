@@ -33,6 +33,7 @@ router.post(
       capacity,
       sedeId,
       createdById: userId,
+      isBoostedForPoints: false,
     });
     res.json({ message: "Class created successfully", class: newClass });
   })
@@ -63,6 +64,7 @@ router.put(
       sedeId,
       enrolled: gymClass.enrolled,
       users: gymClass.users,
+      isBoostedForPoints: gymClass.isBoostedForPoints,
     });
 
     res.json({

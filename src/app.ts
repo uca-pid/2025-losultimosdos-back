@@ -5,12 +5,7 @@ import validateApiKey from "./middleware/api-key-auth";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import {
-  clerkClient,
-  clerkMiddleware,
-  getAuth,
-  requireAuth,
-} from "@clerk/express";
+import { clerkClient, clerkMiddleware, getAuth } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
@@ -25,6 +20,13 @@ import { validateParams } from "./middleware/validation";
 import { routineIdParamSchema } from "./schemas/routine.schema";
 import UserService from "./services/user.service";
 dotenv.config();
+import PointsService from "./services/points.service";
+import ExercisePerformanceService from "./services/exercisePerformance.service";
+
+
+
+
+import { PointEventType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -250,6 +252,31 @@ app.get(
     });
   })
 );
+app.get(
+  "/user/routines/:id/best-performances",
+  clerkMiddleware(),
+  asyncHandler(async (req, res) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const routineId = Number(req.params.id);
+    const routine = await RoutineService.getById(routineId);
+    if (!routine) {
+      return res.status(404).json({ error: "Routine not found" });
+    }
+
+    const exerciseIds = routine.exercises.map((re) => re.exerciseId);
+
+    const best = await ExercisePerformanceService.getBestByUserAndExercises({
+      userId,
+      exerciseIds,
+    });
+
+    res.json({ items: best });
+  })
+);
 
 app.get(
   "/sedes",
@@ -264,6 +291,31 @@ app.get(
         longitude: sede.longitude,
       })),
     });
+  })
+);
+
+app.get(
+  "/leaderboard/users",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+    const sedeId = req.query.sedeId
+      ? Number(req.query.sedeId as string)
+      : undefined;
+
+    const items = await PointsService.userLeaderboard({ period, sedeId });
+
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/leaderboard/sedes",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+
+    const items = await PointsService.sedeLeaderboard({ period });
+
+    res.json({ total: items.length, items });
   })
 );
 

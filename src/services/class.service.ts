@@ -1,7 +1,9 @@
 import { Class, PrismaClient } from "@prisma/client";
 import { ApiValidationError } from "./api-validation-error";
 import UserService from "./user.service";
-
+import PointsService from "./points.service";
+import { PointEventType } from "@prisma/client";
+import BadgeService from "./badge.service";
 class ClassService {
   private readonly prisma: PrismaClient;
   constructor() {
@@ -94,10 +96,19 @@ class ClassService {
       }
     }
 
-    return this.prisma.class.update({
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
+
+    await PointsService.registerEvent({
+      userId,
+      sedeId: updated.sedeId,
+      type: PointEventType.CLASS_ENROLL,
+      classId: updated.id,
+    });
+
+    return updated;
   }
 
   async unenrollClass(userId: string, classId: number) {
@@ -110,14 +121,21 @@ class ClassService {
       throw new ApiValidationError("Not enrolled in this class", 400);
     }
     const newUsers = classData.users.filter((user) => user !== userId);
-    return this.prisma.class.update({
+
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: {
         users: { set: newUsers },
         enrolled: wasEnrolled ? { decrement: 1 } : undefined,
       },
     });
+
+    await PointsService.removeClassEnrollEvent(userId, classId);
+
+    await BadgeService.evaluateForUser(userId, classData.sedeId);
+    return updated;
   }
+
   async listNamesWithEnrollCount(
     upcoming = false
   ): Promise<

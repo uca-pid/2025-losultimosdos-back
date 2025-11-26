@@ -7,20 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Class {
-  id              Int      @id @default(autoincrement())
-  name            String
-  description     String
-  date            DateTime
-  time            String
-  capacity        Int
-  enrolled        Int      @default(0)
-  createdById     String  
-  users           String[] @default([])
-  sedeId          Int
-  sede            Sede   @relation(fields: [sedeId], references: [id])
-  goals           Goal[]
+  id                 Int      @id @default(autoincrement())
+  name               String
+  description        String
+  date               DateTime
+  time               String
+  capacity           Int
+  enrolled           Int      @default(0)
+  createdById        String
+  users              String[] @default([])
+  sedeId             Int
+  sede               Sede     @relation(fields: [sedeId], references: [id])
+  goals              Goal[]
+  isBoostedForPoints Boolean  @default(false)
 }
 
 model MuscleGroup {
@@ -29,42 +29,43 @@ model MuscleGroup {
   exercises Exercise[]
 }
 
-
 model Exercise {
-  id            Int           @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   name          String
   equipment     String?
   videoUrl      String?
-  muscleGroupId Int           
-  muscleGroup   MuscleGroup   @relation(fields: [muscleGroupId], references: [id])
+  muscleGroupId Int
+  muscleGroup   MuscleGroup @relation(fields: [muscleGroupId], references: [id])
 
-  routines      RoutineExercise[]
+  routines     RoutineExercise[]
+  performances ExercisePerformance[]
 }
 
 model Routine {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  level       Level @default(Beginner)
-  duration    Int?
-  icon        String?
-  exercises   RoutineExercise[]
-  users       String[] @default([])
-  sedeId      Int
-  sede        Sede   @relation(fields: [sedeId], references: [id])
-  goals       Goal[]
+  id           Int                   @id @default(autoincrement())
+  name         String
+  description  String?
+  level        Level                 @default(Beginner)
+  duration     Int?
+  icon         String?
+  exercises    RoutineExercise[]
+  users        String[]              @default([])
+  sedeId       Int
+  sede         Sede                  @relation(fields: [sedeId], references: [id])
+  goals        Goal[]
+  performances ExercisePerformance[]
 }
 
 model RoutineExercise {
-  id         Int      @id @default(autoincrement())
+  id         Int  @id @default(autoincrement())
   routineId  Int
   exerciseId Int
   sets       Int?
   reps       Int?
-  restTime   Int?     // en segundos
+  restTime   Int? // en segundos
 
-  routine    Routine  @relation(fields: [routineId], references: [id])
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  routine  Routine  @relation(fields: [routineId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
 }
 
 enum Role {
@@ -79,28 +80,29 @@ enum Level {
 }
 
 model DailyUserCount {
-  id        Int       @id @default(autoincrement())
-  date      DateTime
-  basic Int @default(0)
-  premium Int @default(0)
-  sedeId Int @default(1)
-  sede Sede @relation(fields: [sedeId], references: [id])
+  id      Int      @id @default(autoincrement())
+  date    DateTime
+  basic   Int      @default(0)
+  premium Int      @default(0)
+  sedeId  Int      @default(1)
+  sede    Sede     @relation(fields: [sedeId], references: [id])
 }
 
-
 model Sede {
-  id Int @id @default(autoincrement())
-  name String
-  address String
-  latitude Float
-  longitude Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  classes   Class[]
-  users     String[] @default([])
-  routines  Routine[]
+  id             Int              @id @default(autoincrement())
+  name           String
+  address        String
+  latitude       Float
+  longitude      Float
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  classes        Class[]
+  users          String[]         @default([])
+  routines       Routine[]
   dailyUserCount DailyUserCount[]
-  goals     Goal[]
+  goals          Goal[]
+  points         PointEvent[]
+  challenges     Challenge[]
 }
 
 enum GoalCategory {
@@ -139,4 +141,105 @@ model ApiKey {
 
   @@index([userId])
   @@index([keyHash])
+}
+
+enum PointEventType {
+  CLASS_ENROLL
+  ROUTINE_ASSIGN
+  ROUTINE_COMPLETE
+  CHALLENGE_COMPLETE
+}
+
+model PointEvent {
+  id        Int            @id @default(autoincrement())
+  userId    String
+  sedeId    Int
+  type      PointEventType
+  points    Int
+  classId   Int?
+  routineId Int?
+  createdAt DateTime       @default(now())
+
+  sede Sede @relation(fields: [sedeId], references: [id])
+}
+
+model ExercisePerformance {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  routineId  Int?
+  exerciseId Int
+  weight     Float
+  reps       Int
+  createdAt  DateTime @default(now())
+
+  routine  Routine? @relation(fields: [routineId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@index([userId, exerciseId])
+  @@index([userId, routineId])
+}
+
+enum BadgeMetric {
+  TOTAL_POINTS
+  CLASS_ENROLL_COUNT
+  ROUTINE_COMPLETE_COUNT
+}
+
+model Badge {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique
+  name        String
+  description String?
+  icon        String?
+  metric      BadgeMetric
+  threshold   Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id       Int      @id @default(autoincrement())
+  badgeId  Int
+  userId   String
+  earnedAt DateTime @default(now())
+
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([badgeId, userId])
+}
+
+enum ChallengeFrequency {
+  DAILY
+  WEEKLY
+}
+
+model Challenge {
+  id           Int                @id @default(autoincrement())
+  title        String
+  description  String?
+  frequency    ChallengeFrequency
+  pointsReward Int
+  minLevel     Int                @default(3)
+  sedeId       Int?
+  sede         Sede?              @relation(fields: [sedeId], references: [id])
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id          Int      @id @default(autoincrement())
+  challengeId Int
+  userId      String
+  periodKey   String
+  completedAt DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([challengeId, userId, periodKey])
 }
