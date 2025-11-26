@@ -10,7 +10,6 @@ import {
   userIdParamSchema,
 } from "../../schemas/routine.schema";
 import RoutineService from "../../services/routine.service";
-import { ApiValidationError } from "../../services/api-validation-error";
 
 const router = Router();
 
@@ -29,7 +28,6 @@ router.put(
   validateBody(routineUpdateSchema),
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    console.log(JSON.stringify(req.body, null, 2));
     const routine = await RoutineService.update(id, req.body);
     res.json({ message: "Routine updated", routine });
   })

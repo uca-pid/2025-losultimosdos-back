@@ -3,8 +3,6 @@ import { ApiValidationError } from "./api-validation-error";
 import PointsService from "./points.service";
 import { PointEventType } from "@prisma/client";
 
-
-
 type REItem = {
   exerciseId: number;
   sets?: number | null;
@@ -242,7 +240,7 @@ class RoutineService {
     });
   }
 
-    async assign(id: number, usersId: string) {
+  async assign(id: number, usersId: string) {
     const routine = await this.prisma.routine.findUnique({
       where: { id },
       select: { users: true, sedeId: true, id: true },
@@ -256,7 +254,6 @@ class RoutineService {
       data: { users: { push: usersId } },
     });
 
-    // 🎯 Registrar puntos por asignación de rutina
     await PointsService.registerEvent({
       userId: usersId,
       sedeId: routine.sedeId,
@@ -267,7 +264,6 @@ class RoutineService {
     return updatedRoutine;
   }
 
-
   async unassign(id: number, usersId: string) {
     const routine = await this.prisma.routine.findUnique({
       where: { id },
@@ -276,6 +272,8 @@ class RoutineService {
     if (!routine) throw new ApiValidationError("Routine not found", 404);
     if (!routine.users.includes(usersId))
       throw new ApiValidationError("User not assigned to routine", 400);
+
+    await PointsService.removeRoutineAssignEvent(usersId, id);
     return this.prisma.routine.update({
       where: { id },
       data: {

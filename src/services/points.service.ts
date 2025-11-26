@@ -11,19 +11,16 @@ class PointsService {
     this.prisma = new PrismaClient();
   }
 
-  // tabla de puntos base por tipo de evento
   private readonly POINTS_BY_TYPE: Record<PointEventType, number> = {
     CLASS_ENROLL: 10,
     ROUTINE_ASSIGN: 15,
     ROUTINE_COMPLETE: 25,
   };
 
-  // 👈 ESTE ES EL MÉTODO QUE TE FALTABA
   getBasePoints(type: PointEventType): number {
     return this.POINTS_BY_TYPE[type];
   }
 
-  // ahora registerEvent acepta customPoints para cosas como la rutina completa o penalizaciones
   async registerEvent(options: {
     userId: string;
     sedeId: number;
@@ -43,16 +40,7 @@ class PointsService {
       throw new Error(`No points configured for event type: ${type}`);
     }
 
-    return this.prisma.pointEvent.create({
-      data: {
-        userId,
-        sedeId,
-        type,
-        points,
-        classId,
-        routineId,
-      },
-    });
+    console.log("points for event", points, type);
     const event = await this.prisma.pointEvent.create({
       data: {
         userId,
@@ -64,7 +52,6 @@ class PointsService {
       },
     });
 
-    // 👇 después de registrar el evento, evaluamos logros
     await BadgeService.evaluateForUser(userId, sedeId);
 
     return event;
@@ -90,8 +77,6 @@ class PointsService {
     return where;
   }
 
-  // 🧍🏻 leaderboard por usuario
-  // 🧍🏻 leaderboard por usuario
   async userLeaderboard(options?: {
     period?: Period;
     sedeId?: number;
@@ -102,7 +87,7 @@ class PointsService {
     const limit = options?.limit ?? 50;
 
     const where = this.buildWhere(period, sedeId);
-
+    console.log("where", where);
     const events = await this.prisma.pointEvent.findMany({
       where,
       select: {
@@ -110,8 +95,7 @@ class PointsService {
         points: true,
       },
     });
-
-    // acumular puntos por userId
+    console.log("events", events);
     const totals = new Map<string, number>();
     for (const ev of events) {
       const prev = totals.get(ev.userId) ?? 0;
@@ -123,7 +107,6 @@ class PointsService {
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, limit);
 
-    // 🔍 buscamos los datos de usuario en Clerk
     const userIds = sorted.map((item) => item.userId);
 
     const users = await Promise.all(
@@ -143,7 +126,6 @@ class PointsService {
         .map((u) => [u.id, u])
     );
 
-    // armamos la respuesta enriquecida
     return sorted.map((item, index) => {
       const u = userById.get(item.userId);
 
@@ -181,7 +163,17 @@ class PointsService {
       },
     });
   }
-  // 🏢 leaderboard por sede
+
+  async removeRoutineAssignEvent(userId: string, routineId: number) {
+    return this.prisma.pointEvent.deleteMany({
+      where: {
+        userId,
+        routineId,
+        type: "ROUTINE_ASSIGN",
+      },
+    });
+  }
+
   async sedeLeaderboard(options?: { period?: Period; limit?: number }) {
     const period = options?.period ?? "all";
     const limit = options?.limit ?? 50;

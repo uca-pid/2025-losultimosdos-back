@@ -5,12 +5,7 @@ import validateApiKey from "./middleware/api-key-auth";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import {
-  clerkClient,
-  clerkMiddleware,
-  getAuth,
-  requireAuth,
-} from "@clerk/express";
+import { clerkClient, clerkMiddleware, getAuth } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { PrismaClient } from "@prisma/client";
 import { WebhookEvent } from "@clerk/backend";
@@ -29,8 +24,6 @@ import PointsService from "./services/points.service";
 import ExercisePerformanceService from "./services/exercisePerformance.service";
 
 import { PointEventType } from "@prisma/client";
-
-
 
 const prisma = new PrismaClient();
 const app = express();
@@ -281,74 +274,6 @@ app.get(
     res.json({ items: best });
   })
 );
-app.post(
-  "/user/routines/:id/complete",
-  clerkMiddleware(),
-  asyncHandler(async (req, res) => {
-    const { userId } = getAuth(req);
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const routineId = Number(req.params.id);
-    const { performances } = req.body as {
-      performances: { exerciseId: number; weight: number; reps: number }[];
-    };
-
-    if (!Array.isArray(performances) || performances.length === 0) {
-      return res.status(400).json({ error: "No performances provided" });
-    }
-
-    // 1) Guardar las series
-    await ExercisePerformanceService.logPerformances({
-      userId,
-      routineId,
-      performances,
-    });
-
-    // 2) Calcular puntos por rutina
-   const routine = await RoutineService.getById(routineId);
-if (!routine) {
-  return res.status(404).json({ error: "Routine not found" });
-}
-
-    const totalExercises = routine.exercises.length || 1;
-
-    const completedExerciseIds = Array.from(
-      new Set(performances.map((p) => p.exerciseId))
-    );
-    const completedCount = completedExerciseIds.length;
-    const completionRatio = Math.min(
-      Math.max(completedCount / totalExercises, 0),
-      1
-    );
-
-    const duration = routine.duration ?? 30; // default si no hay duración
-    const basePointsPer10Min = 20;
-    const baseByDuration = (duration / 10) * basePointsPer10Min;
-
-    const pointsAwarded = Math.round(baseByDuration * completionRatio);
-
-    // 3) Registrar evento de puntos (si suma algo)
-    if (pointsAwarded !== 0) {
-      await PointsService.registerEvent({
-        userId,
-        sedeId: routine.sedeId,
-        type: PointEventType.ROUTINE_COMPLETE,
-        routineId: routine.id,
-        customPoints: pointsAwarded,
-      });
-    }
-
-    res.status(201).json({
-      ok: true,
-      pointsAwarded,
-      completionRatio,
-      completedCount,
-      totalExercises,
-    });
-  })
-);
 
 app.get(
   "/sedes",
@@ -363,6 +288,31 @@ app.get(
         longitude: sede.longitude,
       })),
     });
+  })
+);
+
+app.get(
+  "/leaderboard/users",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+    const sedeId = req.query.sedeId
+      ? Number(req.query.sedeId as string)
+      : undefined;
+
+    const items = await PointsService.userLeaderboard({ period, sedeId });
+
+    res.json({ total: items.length, items });
+  })
+);
+
+app.get(
+  "/leaderboard/sedes",
+  asyncHandler(async (req, res) => {
+    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
+
+    const items = await PointsService.sedeLeaderboard({ period });
+
+    res.json({ total: items.length, items });
   })
 );
 
@@ -391,30 +341,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     });
   }
 });
-app.get(
-  "/leaderboard/users",
-  asyncHandler(async (req, res) => {
-    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
-    const sedeId = req.query.sedeId
-      ? Number(req.query.sedeId as string)
-      : undefined;
-
-    const items = await PointsService.userLeaderboard({ period, sedeId });
-
-    res.json({ total: items.length, items });
-  })
-);
-
-app.get(
-  "/leaderboard/sedes",
-  asyncHandler(async (req, res) => {
-    const period = (req.query.period as "all" | "30d" | "7d") ?? "all";
-
-    const items = await PointsService.sedeLeaderboard({ period });
-
-    res.json({ total: items.length, items });
-  })
-);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Route not found" });

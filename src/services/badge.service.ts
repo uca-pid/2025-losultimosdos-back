@@ -9,7 +9,6 @@ type UserStats = {
 };
 
 class BadgeService {
-  // 1) stats del usuario basadas en PointEvent
   private async getUserStats(
     userId: string,
     sedeId?: number
@@ -38,7 +37,6 @@ class BadgeService {
     };
   }
 
-  // 2) Se llama luego de registrar un evento de puntos
   async evaluateForUser(userId: string, sedeId?: number) {
     const [badges, userBadges, stats] = await Promise.all([
       prisma.badge.findMany(),
@@ -82,20 +80,15 @@ class BadgeService {
     return newlyEarned;
   }
 
-  // ... getUserStats y evaluateForUser LOS DEJÁS IGUAL
-
-  // 2.5) helper: evalúa y devuelve los badges nuevos con su info
   async evaluateAndReturnNew(userId: string, sedeId?: number) {
     const newlyEarnedIds = await this.evaluateForUser(userId, sedeId);
     if (!newlyEarnedIds.length) return [];
 
     const allStatuses = await this.getUserBadges(userId, sedeId);
 
-    // mismas propiedades que devuelve /user/badges
     return allStatuses.filter((b) => newlyEarnedIds.includes(b.badgeId));
   }
 
-  // 3) Para la vitrina del usuario
   async getUserBadges(userId: string, sedeId?: number) {
     const [badges, userBadges, stats] = await Promise.all([
       prisma.badge.findMany(),

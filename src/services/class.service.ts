@@ -70,7 +70,6 @@ class ClassService {
     return this.prisma.class.delete({ where: { id } });
   }
 
-
   async enrollClass(userId: string, classId: number) {
     const [classData, user] = await Promise.all([
       this.getClassById(classId),
@@ -102,7 +101,6 @@ class ClassService {
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
 
-    // 🎯 Gamificación: sumar puntos por inscribirse
     await PointsService.registerEvent({
       userId,
       sedeId: updated.sedeId,

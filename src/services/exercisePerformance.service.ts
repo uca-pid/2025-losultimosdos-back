@@ -27,10 +27,6 @@ class ExercisePerformanceService {
     });
   }
 
-  /**
-   * Devuelve la mejor serie histórica del usuario para cada ejercicio.
-   * "Mejor" = mayor peso; si querés, después lo cambiamos a peso x reps.
-   */
   async getBestByUserAndExercises(params: {
     userId: string;
     exerciseIds: number[];
@@ -38,7 +34,6 @@ class ExercisePerformanceService {
     const { userId, exerciseIds } = params;
     if (!exerciseIds.length) return [];
 
-    // traemos todas las performances de esos ejercicios para ese usuario
     const rows = await this.prisma.exercisePerformance.findMany({
       where: {
         userId,
