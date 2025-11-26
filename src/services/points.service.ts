@@ -1,6 +1,12 @@
+// points.service.ts
 import { PrismaClient, PointEventType, Prisma } from "@prisma/client";
 import UserService from "./user.service";
 import BadgeService from "./badge.service";
+import {
+  getLevelForPoints,
+  getPointsMultiplier,
+  PointsContext,
+} from "../lib/levels"; // ajustá el path
 
 type Period = "all" | "30d" | "7d";
 
@@ -15,10 +21,20 @@ class PointsService {
     CLASS_ENROLL: 10,
     ROUTINE_ASSIGN: 15,
     ROUTINE_COMPLETE: 25,
+    CHALLENGE_COMPLETE: 50,
   };
 
   getBasePoints(type: PointEventType): number {
     return this.POINTS_BY_TYPE[type];
+  }
+
+  async getUserTotalPoints(userId: string, sedeId: number) {
+    const agg = await this.prisma.pointEvent.aggregate({
+      where: { userId, sedeId },
+      _sum: { points: true },
+    });
+
+    return agg._sum.points ?? 0;
   }
 
   async registerEvent(options: {
@@ -31,22 +47,58 @@ class PointsService {
   }) {
     const { userId, sedeId, type, classId, routineId, customPoints } = options;
 
-    const points =
+    const basePoints =
       typeof customPoints === "number"
         ? customPoints
         : this.POINTS_BY_TYPE[type];
 
-    if (typeof points !== "number") {
+    if (typeof basePoints !== "number") {
       throw new Error(`No points configured for event type: ${type}`);
     }
 
-    console.log("points for event", points, type);
+    const currentTotalPoints = await this.getUserTotalPoints(userId, sedeId);
+    const { level } = getLevelForPoints(currentTotalPoints);
+
+    let ctx: PointsContext = { type: "generic" };
+
+    if (type === "CLASS_ENROLL") {
+      let isBoostedClass = false;
+
+      if (typeof classId === "number") {
+        const cls = await this.prisma.class.findUnique({
+          where: { id: classId },
+          select: { isBoostedForPoints: true },
+        });
+
+        isBoostedClass = cls?.isBoostedForPoints ?? false;
+      }
+
+      ctx = { type: "class", isBoostedClass };
+    } else if (type === "ROUTINE_COMPLETE") {
+      ctx = { type: "routine" };
+    } else {
+      ctx = { type: "generic" };
+    }
+
+    const multiplier = getPointsMultiplier(level, ctx);
+
+    const finalPoints = Math.round(basePoints * multiplier);
+
+    console.log("points for event", {
+      type,
+      basePoints,
+      multiplier,
+      finalPoints,
+      level: level.level,
+      ctx,
+    });
+
     const event = await this.prisma.pointEvent.create({
       data: {
         userId,
         sedeId,
         type,
-        points,
+        points: finalPoints,
         classId,
         routineId,
       },
@@ -76,6 +128,9 @@ class PointsService {
 
     return where;
   }
+
+
+
 
   async userLeaderboard(options?: {
     period?: Period;
@@ -154,6 +209,7 @@ class PointsService {
       };
     });
   }
+
   async removeClassEnrollEvent(userId: string, classId: number) {
     return this.prisma.pointEvent.deleteMany({
       where: {

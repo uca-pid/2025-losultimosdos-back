@@ -23,6 +23,9 @@ dotenv.config();
 import PointsService from "./services/points.service";
 import ExercisePerformanceService from "./services/exercisePerformance.service";
 
+
+
+
 import { PointEventType } from "@prisma/client";
 
 const prisma = new PrismaClient();

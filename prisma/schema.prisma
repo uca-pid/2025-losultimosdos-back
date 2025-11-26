@@ -8,18 +8,19 @@ datasource db {
 }
 
 model Class {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  date        DateTime
-  time        String
-  capacity    Int
-  enrolled    Int      @default(0)
-  createdById String
-  users       String[] @default([])
-  sedeId      Int
-  sede        Sede     @relation(fields: [sedeId], references: [id])
-  goals       Goal[]
+  id                 Int      @id @default(autoincrement())
+  name               String
+  description        String
+  date               DateTime
+  time               String
+  capacity           Int
+  enrolled           Int      @default(0)
+  createdById        String
+  users              String[] @default([])
+  sedeId             Int
+  sede               Sede     @relation(fields: [sedeId], references: [id])
+  goals              Goal[]
+  isBoostedForPoints Boolean  @default(false)
 }
 
 model MuscleGroup {
@@ -101,6 +102,7 @@ model Sede {
   dailyUserCount DailyUserCount[]
   goals          Goal[]
   points         PointEvent[]
+  challenges     Challenge[]
 }
 
 enum GoalCategory {
@@ -145,6 +147,7 @@ enum PointEventType {
   CLASS_ENROLL
   ROUTINE_ASSIGN
   ROUTINE_COMPLETE
+  CHALLENGE_COMPLETE
 }
 
 model PointEvent {
@@ -187,23 +190,56 @@ model Badge {
   code        String      @unique
   name        String
   description String?
-  icon        String?     
+  icon        String?
   metric      BadgeMetric
-  threshold   Int         
+  threshold   Int
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  userBadges  UserBadge[]
+  userBadges UserBadge[]
 }
 
 model UserBadge {
-  id        Int      @id @default(autoincrement())
-  badgeId   Int
-  userId    String   
-  earnedAt  DateTime @default(now())
+  id       Int      @id @default(autoincrement())
+  badgeId  Int
+  userId   String
+  earnedAt DateTime @default(now())
 
-  badge     Badge    @relation(fields: [badgeId], references: [id])
+  badge Badge @relation(fields: [badgeId], references: [id])
 
-  @@unique([badgeId, userId]) 
+  @@unique([badgeId, userId])
+}
+
+enum ChallengeFrequency {
+  DAILY
+  WEEKLY
+}
+
+model Challenge {
+  id           Int                @id @default(autoincrement())
+  title        String
+  description  String?
+  frequency    ChallengeFrequency
+  pointsReward Int
+  minLevel     Int                @default(3)
+  sedeId       Int?
+  sede         Sede?              @relation(fields: [sedeId], references: [id])
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id          Int      @id @default(autoincrement())
+  challengeId Int
+  userId      String
+  periodKey   String
+  completedAt DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([challengeId, userId, periodKey])
 }

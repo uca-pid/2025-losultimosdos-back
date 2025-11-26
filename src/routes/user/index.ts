@@ -10,11 +10,18 @@ import UserService from "../../services/user.service";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import RoutineService from "../../services/routine.service";
 import BadgeService from "../../services/badge.service";
-import { PointEventType } from "@prisma/client";
+import {
+  PointEventType,
+  PrismaClient,
+  ChallengeFrequency,
+} from "@prisma/client";
 import ExercisePerformanceService from "../../services/exercisePerformance.service";
 import PointsService from "../../services/points.service";
+import ChallengeService from "../../services/challenge.service"; // 👈 nuevo
+import ActivityService from "../../services/activity.service";
 
 const router = Router();
+const prisma = new PrismaClient(); // 👈 para el calendario
 
 router.use(checkUserRole);
 
@@ -173,6 +180,89 @@ router.post(
     });
   })
 );
+
+
+
+router.post(
+  "/challenges/evaluate",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
+
+    const user = await UserService.getUserById(userId);
+    const newlyCompleted = await ChallengeService.evaluateAndReturnNew(
+      userId,
+      user.sedeId
+    );
+
+    res.json({ items: newlyCompleted });
+  })
+);
+
+router.get(
+  "/training-days",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
+
+    const now = new Date();
+    const yearParam = req.query.year;
+    const monthParam = req.query.month;
+
+    const year = yearParam ? Number(yearParam) : now.getFullYear();
+    const month = monthParam ? Number(monthParam) : now.getMonth() + 1; // 1–12
+
+    if (Number.isNaN(year) || Number.isNaN(month)) {
+      throw new ApiValidationError("Invalid year or month", 400);
+    }
+
+    const result = await ActivityService.getTrainingDays({
+      userId,
+      year,
+      month,
+    });
+
+    res.json(result); // { year, month, trainingDays: ["YYYY-MM-DD", ...] }
+  })
+);
+
+
+router.get(
+  "/challenges",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      throw new ApiValidationError("Unauthorized", 401);
+    }
+
+    const rawFrequency = String(req.query.frequency ?? "daily").toUpperCase();
+    if (!["DAILY", "WEEKLY"].includes(rawFrequency)) {
+      throw new ApiValidationError("Invalid frequency", 400);
+    }
+    const frequency = rawFrequency as ChallengeFrequency;
+
+    const sedeIdParam = req.query.sedeId;
+    const sedeId = sedeIdParam ? Number(sedeIdParam) : undefined;
+    if (sedeIdParam && Number.isNaN(sedeId)) {
+      throw new ApiValidationError("Invalid sedeId", 400);
+    }
+
+    const challenges = await ChallengeService.listForUser({
+      userId,
+      sedeId,
+      frequency,
+    });
+
+    res.json({ challenges });
+  })
+);
+
+
+
 
 router.get(
   "/:userId",
