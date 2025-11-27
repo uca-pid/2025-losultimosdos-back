@@ -134,17 +134,27 @@ class UserService {
     }
 
     try {
+      console.log(
+        "Checking medical check",
+        user.emailAddresses[0]?.emailAddress
+      );
       const response = await fetch(
-        `${process.env.MEDIBOOK_PUBLIC_URL}/medical-check`,
+        `${process.env.MEDIBOOK_PUBLIC_URL}/health-certificate`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.MEDIBOOK_API_KEY}`,
+          },
           body: JSON.stringify({
             email: user.emailAddresses[0]?.emailAddress,
           }),
         }
       );
       const data = await response.json();
+
       if (data.hasHealthCertificate) {
+        console.log("User has health certificate");
         await clerkClient.users.updateUser(userId, {
           publicMetadata: { ...user.publicMetadata, medicalCheck: true },
         });
@@ -153,7 +163,7 @@ class UserService {
       return false;
     } catch (error) {
       console.log("Error checking medical check", error);
-      return true;
+      return false;
     }
   }
 }
