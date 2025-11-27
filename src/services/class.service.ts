@@ -24,9 +24,12 @@ class ClassService {
 
   async getAllClassesBySedeId(sedeId: number) {
     const today = new Date();
-    return this.prisma.class.findMany({
+
+    const classes = await this.prisma.class.findMany({
       where: { sedeId, date: { gte: today } },
     });
+
+    return classes;
   }
 
   async getClassById(id: number) {
@@ -49,13 +52,10 @@ class ClassService {
     return classes;
   }
 
-  // 👇 acá el tipo ya incluye isBoostedForPoints porque viene de Prisma.Class
   async createClass(classData: Omit<Class, "id" | "users" | "enrolled">) {
     return this.prisma.class.create({
       data: {
         ...classData,
-        // por las dudas, si alguien llamó sin el campo:
-        isBoostedForPoints: classData.isBoostedForPoints ?? false,
       },
     });
   }
@@ -66,7 +66,6 @@ class ClassService {
       throw new ApiValidationError("Class not found", 404);
     }
 
-    // data puede incluir isBoostedForPoints y se actualiza normal
     return this.prisma.class.update({ where: { id }, data });
   }
 
@@ -90,7 +89,7 @@ class ClassService {
     if (classData.users.includes(userId)) {
       throw new ApiValidationError("Already enrolled in this class", 400);
     }
-    if (classData.users.length >= classData.capacity) {
+    if (classData.enrolled >= classData.capacity) {
       throw new ApiValidationError("Class is full", 400);
     }
 
