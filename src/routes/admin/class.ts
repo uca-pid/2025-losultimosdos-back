@@ -80,7 +80,7 @@ router.put(
       sedeId,
       enrolled: gymClass.enrolled,
       users: gymClass.users,
-      isBoostedForPoints: gymClass.isBoostedForPoints,
+      isBoostedForPoints: isBoostedForPoints ?? false,
     });
 
     res.json({
