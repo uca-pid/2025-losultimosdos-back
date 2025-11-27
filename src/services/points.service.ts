@@ -147,7 +147,6 @@ class PointsService {
         points: true,
       },
     });
-
     const totals = new Map<string, number>();
     for (const ev of events) {
       const prev = totals.get(ev.userId) ?? 0;

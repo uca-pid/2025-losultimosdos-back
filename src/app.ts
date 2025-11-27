@@ -23,9 +23,6 @@ dotenv.config();
 import PointsService from "./services/points.service";
 import ExercisePerformanceService from "./services/exercisePerformance.service";
 
-
-
-
 import { PointEventType } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -146,6 +143,33 @@ app.post(
   })
 );
 
+app.post(
+  "/medical-check",
+  validateApiKey,
+  asyncHandler(async (req: Request, res: Response) => {
+    const body = req.body as { email: string; medicalCheck: boolean };
+    if (!body.email) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+    if (!body.medicalCheck) {
+      return res.status(400).json({ error: "Medical check is required" });
+    }
+    const user = await clerkClient.users.getUserList({
+      emailAddress: [body.email],
+    });
+    if (user.data.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await clerkClient.users.updateUser(user.data[0].id, {
+      publicMetadata: {
+        ...user.data[0].publicMetadata,
+        medicalCheck: body.medicalCheck,
+      },
+    });
+    res.status(200).json({ message: "Medical check updated" });
+  })
+);
+
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -169,7 +193,6 @@ app.get(
     res.json({ classes });
   })
 );
-
 
 app.get(
   "/exercises",

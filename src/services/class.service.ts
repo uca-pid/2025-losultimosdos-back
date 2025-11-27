@@ -4,7 +4,6 @@ import UserService from "./user.service";
 import PointsService from "./points.service";
 import { PointEventType } from "@prisma/client";
 import BadgeService from "./badge.service";
-
 class ClassService {
   private readonly prisma: PrismaClient;
   constructor() {
@@ -143,7 +142,6 @@ class ClassService {
     return updated;
   }
 
-  // resto igual...
   async listNamesWithEnrollCount(
     upcoming = false
   ): Promise<

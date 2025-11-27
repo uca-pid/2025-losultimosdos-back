@@ -125,6 +125,11 @@ class UserService {
       publicMetadata: { ...user.publicMetadata, sede: sedeId },
     });
   }
+
+  async hasMedicalCheck(userId: string) {
+    const user = await clerkClient.users.getUser(userId);
+    return user.publicMetadata.medicalCheck === "true";
+  }
 }
 
 export default new UserService();

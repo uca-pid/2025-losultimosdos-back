@@ -42,8 +42,7 @@ router.post(
       capacity,
       sedeId,
       createdById: userId,
-      // 👇 si no vino nada, lo dejamos en false
-      isBoostedForPoints: isBoostedForPoints ?? false,
+      isBoostedForPoints: false,
     });
 
     res.json({ message: "Class created successfully", class: newClass });
@@ -56,8 +55,15 @@ router.put(
   validateBody(classInputSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, description, date, time, capacity, sedeId,isBoostedForPoints } =
-      req.body as ClassInput;
+    const {
+      name,
+      description,
+      date,
+      time,
+      capacity,
+      sedeId,
+      isBoostedForPoints,
+    } = req.body as ClassInput;
     const numberId = parseInt(id);
 
     const gymClass = await ClassService.getClassById(numberId);
@@ -75,10 +81,7 @@ router.put(
       sedeId,
       enrolled: gymClass.enrolled,
       users: gymClass.users,
-      isBoostedForPoints:
-        typeof isBoostedForPoints === "boolean"
-          ? isBoostedForPoints
-          : gymClass.isBoostedForPoints,
+      isBoostedForPoints: gymClass.isBoostedForPoints,
     });
 
     res.json({
