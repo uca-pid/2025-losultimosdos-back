@@ -23,8 +23,6 @@ dotenv.config();
 import PointsService from "./services/points.service";
 import ExercisePerformanceService from "./services/exercisePerformance.service";
 
-import { PointEventType } from "@prisma/client";
-
 const prisma = new PrismaClient();
 const app = express();
 
@@ -53,7 +51,12 @@ app.post(
 
         try {
           await clerkClient.users.updateUser(id, {
-            publicMetadata: { role: "user", plan: "basic", sede: "1" },
+            publicMetadata: {
+              role: "user",
+              plan: "basic",
+              sede: "1",
+              medicalCheck: false,
+            },
           });
           console.log(`User ${id} assigned role: user`);
           res
@@ -176,12 +179,11 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.use(clerkMiddleware());
 
-// app.use(checkIsAuthenticated);
-
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 app.use("/api-keys", apiKeyRoutes);
 
+app.use(checkIsAuthenticated);
 app.get(
   "/classes",
   asyncHandler(async (req: Request, res: Response) => {

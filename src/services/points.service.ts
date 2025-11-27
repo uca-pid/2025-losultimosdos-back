@@ -104,6 +104,7 @@ class PointsService {
       },
     });
 
+    console.log("points", event.points);
     await BadgeService.evaluateForUser(userId, sedeId);
 
     return event;

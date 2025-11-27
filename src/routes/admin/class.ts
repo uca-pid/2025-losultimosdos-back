@@ -23,7 +23,6 @@ router.post(
       time,
       capacity,
       sedeId,
-      // 👇 ahora lo tomamos del body
       isBoostedForPoints,
     } = req.body as ClassInput;
 
@@ -42,7 +41,7 @@ router.post(
       capacity,
       sedeId,
       createdById: userId,
-      isBoostedForPoints: false,
+      isBoostedForPoints: isBoostedForPoints ?? false,
     });
 
     res.json({ message: "Class created successfully", class: newClass });

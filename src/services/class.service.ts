@@ -82,6 +82,9 @@ class ClassService {
       UserService.getUserById(userId),
     ]);
 
+    if (!(await UserService.hasMedicalCheck(userId))) {
+      throw new ApiValidationError("User does not have a medical check", 421);
+    }
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
     }
@@ -107,14 +110,14 @@ class ClassService {
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
 
-    await PointsService.registerEvent({
+    const event = await PointsService.registerEvent({
       userId,
       sedeId: updated.sedeId,
       type: PointEventType.CLASS_ENROLL,
       classId: updated.id,
     });
 
-    return updated;
+    return { updated, pointsAwarded: event.points };
   }
 
   async unenrollClass(userId: string, classId: number) {
