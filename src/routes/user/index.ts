@@ -39,8 +39,12 @@ router.post(
       throw new ApiValidationError("Unauthorized", 401);
     }
 
-    const updatedClass = await ClassService.enrollClass(userId, classId);
-    res.json({ message: "Enrolled successfully", class: updatedClass });
+    const data = await ClassService.enrollClass(userId, classId);
+    res.json({
+      message: "Enrolled successfully",
+      class: data.updated,
+      pointsAwarded: data.pointsAwarded,
+    });
   })
 );
 
@@ -160,28 +164,27 @@ router.post(
     const baseByDuration = (duration / 10) * basePointsPer10Min;
 
     const pointsAwarded = Math.round(baseByDuration * completionRatio);
-
+    let finalPointsAwarded = pointsAwarded;
     if (pointsAwarded !== 0) {
-      await PointsService.registerEvent({
+      const event = await PointsService.registerEvent({
         userId,
         sedeId: routine.sedeId,
         type: PointEventType.ROUTINE_COMPLETE,
         routineId: routine.id,
         customPoints: pointsAwarded,
       });
+      finalPointsAwarded = event.points;
     }
 
     res.status(201).json({
       ok: true,
-      pointsAwarded,
+      pointsAwarded: finalPointsAwarded,
       completionRatio,
       completedCount,
       totalExercises,
     });
   })
 );
-
-
 
 router.post(
   "/challenges/evaluate",
@@ -230,7 +233,6 @@ router.get(
   })
 );
 
-
 router.get(
   "/challenges",
   asyncHandler(async (req: Request, res: Response) => {
@@ -260,9 +262,6 @@ router.get(
     res.json({ challenges });
   })
 );
-
-
-
 
 router.get(
   "/:userId",

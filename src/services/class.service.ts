@@ -23,9 +23,12 @@ class ClassService {
 
   async getAllClassesBySedeId(sedeId: number) {
     const today = new Date();
-    return this.prisma.class.findMany({
+
+    const classes = await this.prisma.class.findMany({
       where: { sedeId, date: { gte: today } },
     });
+
+    return classes;
   }
 
   async getClassById(id: number) {
@@ -50,7 +53,9 @@ class ClassService {
 
   async createClass(classData: Omit<Class, "id" | "users" | "enrolled">) {
     return this.prisma.class.create({
-      data: { ...classData },
+      data: {
+        ...classData,
+      },
     });
   }
 
@@ -59,7 +64,8 @@ class ClassService {
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
     }
-    return this.prisma.class.update({ where: { id }, data: data });
+
+    return this.prisma.class.update({ where: { id }, data });
   }
 
   async deleteClass(id: number) {
@@ -76,13 +82,16 @@ class ClassService {
       UserService.getUserById(userId),
     ]);
 
+    if (!(await UserService.hasMedicalCheck(userId))) {
+      throw new ApiValidationError("User does not have a medical check", 421);
+    }
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
     }
     if (classData.users.includes(userId)) {
       throw new ApiValidationError("Already enrolled in this class", 400);
     }
-    if (classData.users.length >= classData.capacity) {
+    if (classData.enrolled >= classData.capacity) {
       throw new ApiValidationError("Class is full", 400);
     }
 
@@ -101,14 +110,14 @@ class ClassService {
       data: { users: { push: userId }, enrolled: { increment: 1 } },
     });
 
-    await PointsService.registerEvent({
+    const event = await PointsService.registerEvent({
       userId,
       sedeId: updated.sedeId,
       type: PointEventType.CLASS_ENROLL,
       classId: updated.id,
     });
 
-    return updated;
+    return { updated, pointsAwarded: event.points };
   }
 
   async unenrollClass(userId: string, classId: number) {
@@ -159,6 +168,7 @@ class ClassService {
       sede: { id: c.sede.id, name: c.sede.name },
     }));
   }
+
   async enrollmentsByHour(upcoming = true): Promise<
     {
       sedeId: number;
@@ -182,7 +192,6 @@ class ClassService {
       },
     });
 
-    // Group by sedeId first
     const sedeBuckets = new Map<
       number,
       { name: string; hourBuckets: Map<string, number> }
@@ -193,7 +202,7 @@ class ClassService {
         typeof r.time === "string" ? r.time.match(/^(\d{1,2})/) : null;
       if (!match) continue;
 
-      const hour = match[1].padStart(2, "0"); // "9" -> "09"
+      const hour = match[1].padStart(2, "0");
 
       if (!sedeBuckets.has(r.sedeId)) {
         sedeBuckets.set(r.sedeId, {
@@ -207,7 +216,6 @@ class ClassService {
       sedeData.hourBuckets.set(hour, curr + (r.enrolled ?? 0));
     }
 
-    // Convert to final format
     const items = Array.from(sedeBuckets, ([sedeId, sedeData]) => {
       const hours = Array.from(sedeData.hourBuckets, ([hour, total]) => ({
         hour,

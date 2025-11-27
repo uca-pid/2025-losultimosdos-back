@@ -125,6 +125,37 @@ class UserService {
       publicMetadata: { ...user.publicMetadata, sede: sedeId },
     });
   }
+
+  async hasMedicalCheck(userId: string) {
+    const user = await clerkClient.users.getUser(userId);
+
+    if (user.publicMetadata.medicalCheck) {
+      return true;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.MEDIBOOK_PUBLIC_URL}/medical-check`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            email: user.emailAddresses[0]?.emailAddress,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (data.hasHealthCertificate) {
+        await clerkClient.users.updateUser(userId, {
+          publicMetadata: { ...user.publicMetadata, medicalCheck: true },
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.log("Error checking medical check", error);
+      return true;
+    }
+  }
 }
 
 export default new UserService();

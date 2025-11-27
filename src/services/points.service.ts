@@ -104,6 +104,7 @@ class PointsService {
       },
     });
 
+    console.log("points", event.points);
     await BadgeService.evaluateForUser(userId, sedeId);
 
     return event;
@@ -129,9 +130,6 @@ class PointsService {
     return where;
   }
 
-
-
-
   async userLeaderboard(options?: {
     period?: Period;
     sedeId?: number;
@@ -150,7 +148,6 @@ class PointsService {
         points: true,
       },
     });
-    console.log("events", events);
     const totals = new Map<string, number>();
     for (const ev of events) {
       const prev = totals.get(ev.userId) ?? 0;

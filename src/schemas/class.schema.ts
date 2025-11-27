@@ -24,6 +24,9 @@ export const classInputSchema = z.object({
     .number("Sede ID is required")
     .int("Sede ID must be an integer")
     .positive("Sede ID must be a positive number"),
+
+  // 👇 NUEVO: flag de clase boosteada
+  isBoostedForPoints: z.boolean().optional().default(false),
 });
 
 // Schema for class enrollment/unenrollment
