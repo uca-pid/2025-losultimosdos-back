@@ -170,6 +170,7 @@ app.get(
   })
 );
 
+
 app.get(
   "/exercises",
   asyncHandler(async (req: Request, res: Response) => {

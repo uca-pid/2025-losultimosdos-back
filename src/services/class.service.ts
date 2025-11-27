@@ -4,6 +4,7 @@ import UserService from "./user.service";
 import PointsService from "./points.service";
 import { PointEventType } from "@prisma/client";
 import BadgeService from "./badge.service";
+
 class ClassService {
   private readonly prisma: PrismaClient;
   constructor() {
@@ -48,9 +49,14 @@ class ClassService {
     return classes;
   }
 
+  // 👇 acá el tipo ya incluye isBoostedForPoints porque viene de Prisma.Class
   async createClass(classData: Omit<Class, "id" | "users" | "enrolled">) {
     return this.prisma.class.create({
-      data: { ...classData },
+      data: {
+        ...classData,
+        // por las dudas, si alguien llamó sin el campo:
+        isBoostedForPoints: classData.isBoostedForPoints ?? false,
+      },
     });
   }
 
@@ -59,7 +65,9 @@ class ClassService {
     if (!classData) {
       throw new ApiValidationError("Class not found", 404);
     }
-    return this.prisma.class.update({ where: { id }, data: data });
+
+    // data puede incluir isBoostedForPoints y se actualiza normal
+    return this.prisma.class.update({ where: { id }, data });
   }
 
   async deleteClass(id: number) {
@@ -136,6 +144,7 @@ class ClassService {
     return updated;
   }
 
+  // resto igual...
   async listNamesWithEnrollCount(
     upcoming = false
   ): Promise<
@@ -159,6 +168,7 @@ class ClassService {
       sede: { id: c.sede.id, name: c.sede.name },
     }));
   }
+
   async enrollmentsByHour(upcoming = true): Promise<
     {
       sedeId: number;
@@ -182,7 +192,6 @@ class ClassService {
       },
     });
 
-    // Group by sedeId first
     const sedeBuckets = new Map<
       number,
       { name: string; hourBuckets: Map<string, number> }
@@ -193,7 +202,7 @@ class ClassService {
         typeof r.time === "string" ? r.time.match(/^(\d{1,2})/) : null;
       if (!match) continue;
 
-      const hour = match[1].padStart(2, "0"); // "9" -> "09"
+      const hour = match[1].padStart(2, "0");
 
       if (!sedeBuckets.has(r.sedeId)) {
         sedeBuckets.set(r.sedeId, {
@@ -207,7 +216,6 @@ class ClassService {
       sedeData.hourBuckets.set(hour, curr + (r.enrolled ?? 0));
     }
 
-    // Convert to final format
     const items = Array.from(sedeBuckets, ([sedeId, sedeData]) => {
       const hours = Array.from(sedeData.hourBuckets, ([hour, total]) => ({
         hour,

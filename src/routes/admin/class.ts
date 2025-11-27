@@ -12,19 +12,28 @@ import { ApiValidationError } from "../../services/api-validation-error";
 import { asyncHandler } from "../../middleware/asyncHandler";
 
 const router = Router();
-
 router.post(
   "/",
   validateBody(classInputSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { name, description, date, time, capacity, sedeId } =
-      req.body as ClassInput;
+    const {
+      name,
+      description,
+      date,
+      time,
+      capacity,
+      sedeId,
+      // 👇 ahora lo tomamos del body
+      isBoostedForPoints,
+    } = req.body as ClassInput;
+
     const dateTime = new Date(`${date}`);
 
     const { userId } = getAuth(req);
     if (!userId) {
       throw new ApiValidationError("Unauthorized", 401);
     }
+
     const newClass = await ClassService.createClass({
       name,
       description,
@@ -33,8 +42,10 @@ router.post(
       capacity,
       sedeId,
       createdById: userId,
-      isBoostedForPoints: false,
+      // 👇 si no vino nada, lo dejamos en false
+      isBoostedForPoints: isBoostedForPoints ?? false,
     });
+
     res.json({ message: "Class created successfully", class: newClass });
   })
 );
@@ -45,7 +56,7 @@ router.put(
   validateBody(classInputSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, description, date, time, capacity, sedeId } =
+    const { name, description, date, time, capacity, sedeId,isBoostedForPoints } =
       req.body as ClassInput;
     const numberId = parseInt(id);
 
@@ -64,7 +75,10 @@ router.put(
       sedeId,
       enrolled: gymClass.enrolled,
       users: gymClass.users,
-      isBoostedForPoints: gymClass.isBoostedForPoints,
+      isBoostedForPoints:
+        typeof isBoostedForPoints === "boolean"
+          ? isBoostedForPoints
+          : gymClass.isBoostedForPoints,
     });
 
     res.json({
