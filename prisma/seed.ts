@@ -15,9 +15,8 @@ const generateDataForSede = async (sede: Sede): Promise<DailyCount[]> => {
   const totalDays = 90;
   const today = new Date();
 
-  console.log(`\n📊 Processing Sede: ${sede.name} (ID: ${sede.id})`);
+  console.log(`Processing Sede: ${sede.name} (ID: ${sede.id})`);
 
-  // Get current user counts for this sede
   let finalBasic = 0;
   let finalPremium = 0;
 
@@ -26,20 +25,20 @@ const generateDataForSede = async (sede: Sede): Promise<DailyCount[]> => {
     finalBasic = users.data.filter(
       (user) =>
         user.publicMetadata.plan === "basic" &&
-        user.publicMetadata.sede === sede.id
+        user.publicMetadata.sede === sede.id,
     ).length;
     finalPremium = users.data.filter(
       (user) =>
         user.publicMetadata.plan === "premium" &&
-        user.publicMetadata.sede === sede.id
+        user.publicMetadata.sede === sede.id,
     ).length;
 
     console.log(
-      `  📈 Current counts - Basic: ${finalBasic}, Premium: ${finalPremium}`
+      `  📈 Current counts - Basic: ${finalBasic}, Premium: ${finalPremium}`,
     );
   } catch (error) {
     console.warn(
-      "  ⚠️ Could not fetch current user counts from Clerk, using defaults (0, 0)"
+      "  ⚠️ Could not fetch current user counts from Clerk, using defaults (0, 0)",
     );
   }
 
@@ -133,7 +132,7 @@ async function main() {
     const sedeData = await generateDataForSede(sede);
     allData.push(...sedeData);
     console.log(
-      `  ✅ Generated ${sedeData.length} days of data for ${sede.name}`
+      `  ✅ Generated ${sedeData.length} days of data for ${sede.name}`,
     );
   }
 
@@ -146,7 +145,7 @@ async function main() {
   await prisma.dailyUserCount.createMany({ data: allData });
 
   console.log(
-    `\n✅ Successfully seeded ${allData.length} daily user count records for ${sedes.length} sede(s)!`
+    `\n✅ Successfully seeded ${allData.length} daily user count records for ${sedes.length} sede(s)!`,
   );
   console.log("\n📊 Summary:");
   for (const sede of sedes) {

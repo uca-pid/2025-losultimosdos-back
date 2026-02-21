@@ -215,12 +215,14 @@ const exercisesByMuscleGroup = {
 
 const sedes = [
   {
+    id: 1,
     name: "Recoleta",
     address: "Av. Pueyrredon 2068",
     latitude: -34.58747,
     longitude: -58.3973,
   },
   {
+    id: 2,
     name: "Puerto Madero",
     address:
       "Av. Alicia Moreau de Justo 1500 Planta Baja, C1107 Cdad. Autónoma de Buenos Aires",
@@ -228,6 +230,7 @@ const sedes = [
     longitude: -58.36584838892029,
   },
   {
+    id: 3,
     name: "River",
     address:
       "Estadio Monumental, Avenida Guillermo Udaondo, Buenos Aires, Comuna 13, Autonomous City of Buenos Aires, C1424BCL, Argentina",
@@ -338,21 +341,28 @@ const getRandomDate = (daysFromNow: number, daysRange: number): Date => {
 };
 
 const main = async () => {
-  console.log("🌱 Starting database seeding...");
+  console.log("Starting database seeding...");
 
   try {
-    // Clean existing data (except DailyUserCount)
-    console.log("🧹 Cleaning existing data...");
+    console.log("Cleaning existing data...");
+    await prisma.userChallenge.deleteMany({});
+    await prisma.challenge.deleteMany({});
+    await prisma.userBadge.deleteMany({});
+    await prisma.pointEvent.deleteMany({});
+    await prisma.exercisePerformance.deleteMany({});
     await prisma.goal.deleteMany({});
     await prisma.routineExercise.deleteMany({});
     await prisma.class.deleteMany({});
     await prisma.routine.deleteMany({});
     await prisma.exercise.deleteMany({});
     await prisma.muscleGroup.deleteMany({});
+    await prisma.dailyUserCount.deleteMany({});
     await prisma.sede.deleteMany({});
+    await prisma.$executeRawUnsafe(
+      `ALTER SEQUENCE "Sede_id_seq" RESTART WITH 1`,
+    );
 
-    // Create Sedes
-    console.log("📍 Creating sedes...");
+    console.log("Creating sedes...");
     const createdSedes: Sede[] = [];
     for (const sede of sedes) {
       const created = await prisma.sede.create({
@@ -362,8 +372,7 @@ const main = async () => {
       console.log(`  ✓ Created sede: ${created.name}`);
     }
 
-    // Create Muscle Groups
-    console.log("💪 Creating muscle groups...");
+    console.log("Creating muscle groups...");
     const createdMuscleGroups: MuscleGroup[] = [];
     for (const group of muscleGroups) {
       const created = await prisma.muscleGroup.create({
@@ -373,8 +382,7 @@ const main = async () => {
       console.log(`  ✓ Created muscle group: ${created.name}`);
     }
 
-    // Create Exercises
-    console.log("🏋️ Creating exercises...");
+    console.log("Creating exercises...");
     const createdExercises: { [key: string]: Exercise[] } = {};
     for (const muscleGroup of createdMuscleGroups) {
       const exercises =
@@ -392,14 +400,13 @@ const main = async () => {
           });
           createdExercises[muscleGroup.name].push(created);
           console.log(
-            `  ✓ Created exercise: ${created.name} (${muscleGroup.name})`
+            `  ✓ Created exercise: ${created.name} (${muscleGroup.name})`,
           );
         }
       }
     }
 
-    // Create Routines with Exercises
-    console.log("📋 Creating routines...");
+    console.log("Creating routines...");
     const createdRoutines: Routine[] = [];
     for (const sede of createdSedes) {
       for (const routineTemplate of routineTemplates) {
@@ -412,7 +419,6 @@ const main = async () => {
         createdRoutines.push(routine);
         console.log(`  ✓ Created routine: ${routine.name} at ${sede.name}`);
 
-        // Add exercises to routine
         const numExercises = getRandomInt(4, 8);
         const allExercises = Object.values(createdExercises).flat();
         const selectedExercises = allExercises
@@ -434,8 +440,7 @@ const main = async () => {
       }
     }
 
-    // Create Classes
-    console.log("📅 Creating classes...");
+    console.log("Creating classes...");
     const createdClasses: Class[] = [];
     for (const sede of createdSedes) {
       for (let i = 0; i < 20; i++) {
@@ -443,7 +448,7 @@ const main = async () => {
           classTemplates[getRandomInt(0, classTemplates.length - 1)];
         const date = getRandomDate(1, 30);
         const hours = getRandomInt(6, 20);
-        const minutes = getRandomInt(0, 3) * 15; // 0, 15, 30, 45
+        const minutes = getRandomInt(0, 3) * 15;
         const time = `${hours.toString().padStart(2, "0")}:${minutes
           .toString()
           .padStart(2, "0")}`;
@@ -465,8 +470,7 @@ const main = async () => {
       console.log(`  ✓ Created 20 classes at ${sede.name}`);
     }
 
-    // Create Goals
-    console.log("🎯 Creating goals...");
+    console.log("Creating goals...");
     for (const sede of createdSedes) {
       for (const goalTemplate of goalTemplates) {
         const startDate = getRandomDate(-30, 0);
@@ -475,13 +479,12 @@ const main = async () => {
         let targetClassId: number | null = null;
         let targetRoutineId: number | null = null;
 
-        // Assign specific class or routine if applicable
         if (
           goalTemplate.category === GoalCategory.CLASS_ENROLLMENTS &&
           createdClasses.length > 0
         ) {
           const sedeClasses = createdClasses.filter(
-            (c) => c.sedeId === sede.id
+            (c) => c.sedeId === sede.id,
           );
           if (sedeClasses.length > 0) {
             targetClassId =
@@ -492,7 +495,7 @@ const main = async () => {
           createdRoutines.length > 0
         ) {
           const sedeRoutines = createdRoutines.filter(
-            (r) => r.sedeId === sede.id
+            (r) => r.sedeId === sede.id,
           );
           if (sedeRoutines.length > 0) {
             targetRoutineId =
@@ -508,7 +511,7 @@ const main = async () => {
             targetValue: goalTemplate.targetValue,
             currentValue: getRandomInt(
               0,
-              Math.floor(goalTemplate.targetValue * 0.7)
+              Math.floor(goalTemplate.targetValue * 0.7),
             ),
             startDate: startDate,
             endDate: endDate,
@@ -521,18 +524,18 @@ const main = async () => {
       }
     }
 
-    console.log("\n✅ Database seeding completed successfully!");
-    console.log("\n📊 Summary:");
+    console.log("Database seeding completed successfully!");
+    console.log("Summary:");
     console.log(`  - Sedes: ${createdSedes.length}`);
     console.log(`  - Muscle Groups: ${createdMuscleGroups.length}`);
     console.log(
-      `  - Exercises: ${Object.values(createdExercises).flat().length}`
+      `  - Exercises: ${Object.values(createdExercises).flat().length}`,
     );
     console.log(`  - Routines: ${createdRoutines.length}`);
     console.log(`  - Classes: ${createdClasses.length}`);
     console.log(`  - Goals: ${createdSedes.length * goalTemplates.length}`);
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
+    console.error("Error seeding database:", error);
     throw error;
   }
 };

@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 
 async function main() {
   const badges = [
-    // 🎯 PUNTOS TOTALES
     {
       code: "POINTS_100",
       name: "Bronce: 100 puntos",
@@ -30,7 +29,6 @@ async function main() {
       threshold: 1000,
     },
 
-    // 📚 CLASES
     {
       code: "CLASSES_5",
       name: "Calentando motores",
@@ -56,7 +54,6 @@ async function main() {
       threshold: 20,
     },
 
-    // 📋 RUTINAS COMPLETADAS
     {
       code: "ROUTINES_3",
       name: "Rutinas en marcha",
@@ -97,7 +94,7 @@ async function main() {
     });
   }
 
-  console.log("✅ Badges seed ejecutado correctamente");
+  console.log("Badges seed ejecutado correctamente");
 }
 
 main()

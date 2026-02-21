@@ -1,11 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import { ApiValidationError } from "./api-validation-error";
+
+const BCRYPT_ROUNDS = 10;
 
 class ApiKeyService {
   private readonly prisma: PrismaClient;
   private readonly KEY_PREFIX = "mk_live_";
-  private readonly KEY_LENGTH = 32; // bytes after prefix
+  private readonly KEY_LENGTH = 32;
 
   constructor() {
     this.prisma = new PrismaClient();
@@ -27,11 +30,12 @@ class ApiKeyService {
     }
 
     const plainKey = this.generateApiKey();
+    const hashed = await bcrypt.hash(plainKey, BCRYPT_ROUNDS);
 
     const apiKey = await this.prisma.apiKey.create({
       data: {
         userId,
-        keyHash: plainKey,
+        keyHash: hashed,
       },
     });
 
@@ -55,7 +59,6 @@ class ApiKeyService {
 
     return {
       id: apiKey.id,
-      key: apiKey.keyHash,
       isActive: apiKey.isActive,
       createdAt: apiKey.createdAt,
       lastUsed: apiKey.lastUsed,
@@ -76,11 +79,12 @@ class ApiKeyService {
     }
 
     const plainKey = this.generateApiKey();
+    const hashed = await bcrypt.hash(plainKey, BCRYPT_ROUNDS);
 
     const apiKey = await this.prisma.apiKey.update({
       where: { id: keyId },
       data: {
-        keyHash: plainKey,
+        keyHash: hashed,
         lastUsed: null,
         updatedAt: new Date(),
       },
@@ -115,7 +119,6 @@ class ApiKeyService {
 
     return {
       id: apiKey.id,
-      key: apiKey.keyHash,
       isActive: apiKey.isActive,
       createdAt: apiKey.createdAt,
       lastUsed: apiKey.lastUsed,
@@ -145,23 +148,22 @@ class ApiKeyService {
       return null;
     }
 
-    const apiKey = await this.prisma.apiKey.findFirst({
-      where: {
-        keyHash: plainKey,
-        isActive: true,
-      },
+    const activeKeys = await this.prisma.apiKey.findMany({
+      where: { isActive: true },
     });
 
-    if (!apiKey) {
-      return null;
+    for (const apiKey of activeKeys) {
+      const isMatch = await bcrypt.compare(plainKey, apiKey.keyHash);
+      if (isMatch) {
+        await this.prisma.apiKey.update({
+          where: { id: apiKey.id },
+          data: { lastUsed: new Date() },
+        });
+        return { userId: apiKey.userId };
+      }
     }
 
-    await this.prisma.apiKey.update({
-      where: { id: apiKey.id },
-      data: { lastUsed: new Date() },
-    });
-
-    return { userId: apiKey.userId };
+    return null;
   }
 }
 
