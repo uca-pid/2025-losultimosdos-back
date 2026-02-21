@@ -1,14 +1,12 @@
-// prisma/seed-challenges.ts (o dentro de tu seed principal)
 import { PrismaClient, ChallengeFrequency } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function seedChallenges() {
-  console.log("🎯 Creating challenges...");
+  console.log("Creating challenges...");
 
   await prisma.challenge.createMany({
     data: [
-      // DAILY
       {
         title: "Check-in activo",
         description: "Entrená al menos una vez hoy.",
@@ -139,7 +137,8 @@ async function seedChallenges() {
       },
       {
         title: "Principiante constante",
-        description: "Completá al menos 2 rutinas de nivel Principiante esta semana.",
+        description:
+          "Completá al menos 2 rutinas de nivel Principiante esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 50,
         minLevel: 3,
@@ -148,7 +147,8 @@ async function seedChallenges() {
       },
       {
         title: "Intermedio en subida",
-        description: "Completá al menos 2 rutinas de nivel Intermedio esta semana.",
+        description:
+          "Completá al menos 2 rutinas de nivel Intermedio esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 60,
         minLevel: 3,
@@ -157,7 +157,8 @@ async function seedChallenges() {
       },
       {
         title: "Avanzado total",
-        description: "Completá al menos 1 rutina de nivel Avanzado esta semana.",
+        description:
+          "Completá al menos 1 rutina de nivel Avanzado esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 70,
         minLevel: 4,
@@ -166,7 +167,8 @@ async function seedChallenges() {
       },
       {
         title: "Largo aliento",
-        description: "Completá al menos 2 rutinas de más de 60 minutos esta semana.",
+        description:
+          "Completá al menos 2 rutinas de más de 60 minutos esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 70,
         minLevel: 3,
@@ -175,7 +177,8 @@ async function seedChallenges() {
       },
       {
         title: "Semana de piernas",
-        description: "Entrená piernas al menos en 2 días distintos esta semana.",
+        description:
+          "Entrená piernas al menos en 2 días distintos esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 60,
         minLevel: 3,
@@ -184,7 +187,8 @@ async function seedChallenges() {
       },
       {
         title: "Semana de core",
-        description: "Entrená abdominales al menos en 2 días distintos esta semana.",
+        description:
+          "Entrená abdominales al menos en 2 días distintos esta semana.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 60,
         minLevel: 3,
@@ -202,7 +206,8 @@ async function seedChallenges() {
       },
       {
         title: "Semana equilibrada",
-        description: "Entrená al menos 3 días esta semana usando rutinas de 2 niveles diferentes.",
+        description:
+          "Entrená al menos 3 días esta semana usando rutinas de 2 niveles diferentes.",
         frequency: ChallengeFrequency.WEEKLY,
         pointsReward: 80,
         minLevel: 4,
@@ -212,8 +217,7 @@ async function seedChallenges() {
     ],
     skipDuplicates: true,
   });
-
-  console.log("✅ Challenges seeded");
+  console.log("Challenges seeded");
 }
 
 seedChallenges()

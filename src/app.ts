@@ -12,6 +12,7 @@ import { WebhookEvent } from "@clerk/backend";
 import adminRoutes from "./routes/admin/index";
 import userRoutes from "./routes/user/index";
 import apiKeyRoutes from "./routes/api-keys";
+import gamificationRoutes from "./routes/gamification/index";
 import ClassService from "./services/class.service";
 import { ApiValidationError } from "./services/api-validation-error";
 import ExerciseService from "./services/excersice.service";
@@ -110,7 +111,12 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(",") || [],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -182,6 +188,7 @@ app.use(clerkMiddleware());
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 app.use("/api-keys", apiKeyRoutes);
+app.use("/gamification", gamificationRoutes);
 
 app.use(checkIsAuthenticated);
 app.get(

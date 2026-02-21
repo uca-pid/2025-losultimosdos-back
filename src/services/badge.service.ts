@@ -9,24 +9,18 @@ type UserStats = {
 };
 
 class BadgeService {
-  private async getUserStats(
-    userId: string,
-    sedeId?: number
-  ): Promise<UserStats> {
-    const baseWhere: any = { userId };
-    if (sedeId) baseWhere.sedeId = sedeId;
-
+  private async getUserStats(userId: string): Promise<UserStats> {
     const [pointsAgg, classEnrollCount, routineCompleteCount] =
       await Promise.all([
         prisma.pointEvent.aggregate({
-          where: baseWhere,
+          where: { userId },
           _sum: { points: true },
         }),
-        prisma.pointEvent.count({
-          where: { ...baseWhere, type: PointEventType.CLASS_ENROLL },
+        prisma.class.count({
+          where: { users: { has: userId } },
         }),
         prisma.pointEvent.count({
-          where: { ...baseWhere, type: PointEventType.ROUTINE_COMPLETE },
+          where: { userId, type: PointEventType.ROUTINE_COMPLETE },
         }),
       ]);
 
@@ -37,14 +31,14 @@ class BadgeService {
     };
   }
 
-  async evaluateForUser(userId: string, sedeId?: number) {
+  async evaluateForUser(userId: string, _sedeId?: number) {
     const [badges, userBadges, stats] = await Promise.all([
       prisma.badge.findMany(),
       prisma.userBadge.findMany({
         where: { userId },
         include: { badge: true },
       }),
-      this.getUserStats(userId, sedeId),
+      this.getUserStats(userId),
     ]);
 
     const alreadyEarned = new Set(userBadges.map((ub) => ub.badgeId));
@@ -80,22 +74,22 @@ class BadgeService {
     return newlyEarned;
   }
 
-  async evaluateAndReturnNew(userId: string, sedeId?: number) {
-    const newlyEarnedIds = await this.evaluateForUser(userId, sedeId);
+  async evaluateAndReturnNew(userId: string, _sedeId?: number) {
+    const newlyEarnedIds = await this.evaluateForUser(userId);
     if (!newlyEarnedIds.length) return [];
 
-    const allStatuses = await this.getUserBadges(userId, sedeId);
+    const allStatuses = await this.getUserBadges(userId);
 
     return allStatuses.filter((b) => newlyEarnedIds.includes(b.badgeId));
   }
 
-  async getUserBadges(userId: string, sedeId?: number) {
+  async getUserBadges(userId: string, _sedeId?: number) {
     const [badges, userBadges, stats] = await Promise.all([
       prisma.badge.findMany(),
       prisma.userBadge.findMany({
         where: { userId },
       }),
-      this.getUserStats(userId, sedeId),
+      this.getUserStats(userId),
     ]);
 
     const earnedMap = new Map<number, Date>();
@@ -118,7 +112,7 @@ class BadgeService {
       const threshold = badge.threshold;
       const progress = Math.min(
         1,
-        threshold > 0 ? currentValue / threshold : 0
+        threshold > 0 ? currentValue / threshold : 0,
       );
       const earnedAt = earnedMap.get(badge.id) ?? null;
 

@@ -266,7 +266,16 @@ router.get(
 router.get(
   "/:userId",
   asyncHandler(async (req: Request, res: Response) => {
+    const auth = getAuth(req);
+    if (!auth.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const { userId } = req.params;
+    if (auth.userId !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     const user = await UserService.getUserById(userId);
     res.json(user);
   })
