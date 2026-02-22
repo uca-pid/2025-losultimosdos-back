@@ -30,7 +30,7 @@ const app = express();
 const checkIsAuthenticated = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -74,7 +74,7 @@ app.post(
       console.error("Error verifying webhook:", err);
       return res.status(400).send("Error verifying webhook");
     }
-  }
+  },
 );
 
 cron.schedule("0 0 * * *", async () => {
@@ -86,10 +86,10 @@ cron.schedule("0 0 * * *", async () => {
     });
 
     const basic = users.data.filter(
-      (user) => user.publicMetadata.plan === "basic"
+      (user) => user.publicMetadata.plan === "basic",
     ).length;
     const premium = users.data.filter(
-      (user) => user.publicMetadata.plan === "premium"
+      (user) => user.publicMetadata.plan === "premium",
     ).length;
 
     await prisma.dailyUserCount.create({
@@ -115,7 +115,7 @@ app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [],
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -149,7 +149,7 @@ app.post(
 
     const user = users.data[0];
     res.status(200).json({ isUser: user.publicMetadata.role === "user" });
-  })
+  }),
 );
 
 app.post(
@@ -176,7 +176,7 @@ app.post(
       },
     });
     res.status(200).json({ message: "Medical check updated" });
-  })
+  }),
 );
 
 app.get("/health", (_req: Request, res: Response) => {
@@ -200,7 +200,7 @@ app.get(
     }
     const classes = await ClassService.getAllClassesBySedeId(sedeId);
     res.json({ classes });
-  })
+  }),
 );
 
 app.get(
@@ -212,7 +212,7 @@ app.get(
       muscleGroupId: muscleGroupId ? Number(muscleGroupId) : undefined,
     });
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.get(
@@ -225,7 +225,7 @@ app.get(
     const items = await RoutineService.list(sedeId);
 
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.get(
@@ -234,7 +234,7 @@ app.get(
     const items = await RoutineService.listNamesWithUsersCount();
 
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.get(
@@ -245,7 +245,7 @@ app.get(
     const r = await RoutineService.getById(id);
     if (!r) throw new ApiValidationError("Routine not found", 404);
     res.json(r);
-  })
+  }),
 );
 app.get(
   "/classes/busiest-hour",
@@ -259,7 +259,7 @@ app.get(
       total: items.length,
       items,
     });
-  })
+  }),
 );
 
 app.get(
@@ -269,7 +269,7 @@ app.get(
       String(req.query.upcoming ?? "false").toLowerCase() === "true";
     const items = await ClassService.listNamesWithEnrollCount(upcoming);
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.get(
@@ -283,7 +283,7 @@ app.get(
     res.json({
       data: dailyUserCount,
     });
-  })
+  }),
 );
 app.get(
   "/user/routines/:id/best-performances",
@@ -308,7 +308,7 @@ app.get(
     });
 
     res.json({ items: best });
-  })
+  }),
 );
 
 app.get(
@@ -324,7 +324,7 @@ app.get(
         longitude: sede.longitude,
       })),
     });
-  })
+  }),
 );
 
 app.get(
@@ -338,7 +338,7 @@ app.get(
     const items = await PointsService.userLeaderboard({ period, sedeId });
 
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.get(
@@ -349,7 +349,7 @@ app.get(
     const items = await PointsService.sedeLeaderboard({ period });
 
     res.json({ total: items.length, items });
-  })
+  }),
 );
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -386,5 +386,6 @@ const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => console.log(`Server on ${PORT}`));
 }
+console.log("test");
 
 export default app;
