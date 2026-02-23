@@ -17,11 +17,12 @@ import {
 } from "@prisma/client";
 import ExercisePerformanceService from "../../services/exercisePerformance.service";
 import PointsService from "../../services/points.service";
-import ChallengeService from "../../services/challenge.service"; // 👈 nuevo
+import ChallengeService from "../../services/challenge.service";
 import ActivityService from "../../services/activity.service";
+import WorkoutSessionService from "../../services/workoutSession.service";
+import { createWorkoutSessionSchema } from "../../schemas/workoutSession.schema";
 
 const router = Router();
-const prisma = new PrismaClient(); // 👈 para el calendario
 
 router.use(checkUserRole);
 
@@ -45,7 +46,7 @@ router.post(
       class: data.updated,
       pointsAwarded: data.pointsAwarded,
     });
-  })
+  }),
 );
 
 router.post(
@@ -60,7 +61,7 @@ router.post(
 
     const updatedClass = await ClassService.unenrollClass(userId, classId);
     res.json({ message: "Unenrolled successfully", class: updatedClass });
-  })
+  }),
 );
 
 router.get(
@@ -72,7 +73,7 @@ router.get(
     }
     const classes = await ClassService.getClassByUserId(userId);
     res.json({ classes });
-  })
+  }),
 );
 
 router.get(
@@ -87,7 +88,7 @@ router.get(
     const badges = await BadgeService.getUserBadges(userId, user.sedeId);
 
     res.json({ items: badges });
-  })
+  }),
 );
 
 router.post(
@@ -101,11 +102,11 @@ router.post(
     const user = await UserService.getUserById(userId);
     const newlyEarnedBadges = await BadgeService.evaluateAndReturnNew(
       userId,
-      user.sedeId
+      user.sedeId,
     );
 
     res.json({ items: newlyEarnedBadges });
-  })
+  }),
 );
 
 router.get(
@@ -117,7 +118,7 @@ router.get(
     }
     const routines = await RoutineService.getByUserId(userId);
     res.json({ routines });
-  })
+  }),
 );
 
 router.post(
@@ -151,12 +152,12 @@ router.post(
     const totalExercises = routine.exercises.length || 1;
 
     const completedExerciseIds = Array.from(
-      new Set(performances.map((p) => p.exerciseId))
+      new Set(performances.map((p) => p.exerciseId)),
     );
     const completedCount = completedExerciseIds.length;
     const completionRatio = Math.min(
       Math.max(completedCount / totalExercises, 0),
-      1
+      1,
     );
 
     const duration = routine.duration ?? 30;
@@ -183,7 +184,7 @@ router.post(
       completedCount,
       totalExercises,
     });
-  })
+  }),
 );
 
 router.post(
@@ -197,11 +198,11 @@ router.post(
     const user = await UserService.getUserById(userId);
     const newlyCompleted = await ChallengeService.evaluateAndReturnNew(
       userId,
-      user.sedeId
+      user.sedeId,
     );
 
     res.json({ items: newlyCompleted });
-  })
+  }),
 );
 
 router.get(
@@ -230,7 +231,7 @@ router.get(
     });
 
     res.json(result); // { year, month, trainingDays: ["YYYY-MM-DD", ...] }
-  })
+  }),
 );
 
 router.get(
@@ -260,7 +261,101 @@ router.get(
     });
 
     res.json({ challenges });
-  })
+  }),
+);
+
+// ── Workout Sessions ─────────────────────────────────────
+
+router.post(
+  "/workout-sessions",
+  validateBody(createWorkoutSessionSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { routineId, notes, performances } = req.body as {
+      routineId: number;
+      notes?: string;
+      performances: {
+        exerciseId: number;
+        sets: { reps: number; weight: number; comment?: string }[];
+      }[];
+    };
+
+    const result = await WorkoutSessionService.create({
+      userId,
+      routineId,
+      notes,
+      performances,
+    });
+
+    res.status(201).json(result);
+  }),
+);
+
+router.get(
+  "/workout-sessions",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const routineId = req.query.routineId
+      ? Number(req.query.routineId)
+      : undefined;
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+
+    const result = await WorkoutSessionService.listByUser(userId, {
+      routineId,
+      page,
+      limit,
+    });
+
+    res.json(result);
+  }),
+);
+
+router.get(
+  "/workout-sessions/:id",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const sessionId = Number(req.params.id);
+    const session = await WorkoutSessionService.getById(sessionId);
+
+    if (!session || session.userId !== userId) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    res.json(session);
+  }),
+);
+
+// ── Exercise Progress ────────────────────────────────────
+
+router.get(
+  "/exercises/:id/progress",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const exerciseId = Number(req.params.id);
+    const progress = await ExercisePerformanceService.getProgressByExercise({
+      userId,
+      exerciseId,
+    });
+
+    res.json({ items: progress });
+  }),
 );
 
 router.get(
@@ -278,7 +373,7 @@ router.get(
 
     const user = await UserService.getUserById(userId);
     res.json(user);
-  })
+  }),
 );
 
 export default router;

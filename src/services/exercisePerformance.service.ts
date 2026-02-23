@@ -62,6 +62,60 @@ class ExercisePerformanceService {
       reps: best.reps,
     }));
   }
+
+  async getProgressByExercise(params: {
+    userId: string;
+    exerciseId: number;
+  }) {
+    const { userId, exerciseId } = params;
+
+    const rows = await this.prisma.exercisePerformance.findMany({
+      where: { userId, exerciseId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        weight: true,
+        reps: true,
+        setNumber: true,
+        createdAt: true,
+        sessionId: true,
+      },
+    });
+
+    if (!rows.length) return [];
+
+    const grouped = new Map<
+      string,
+      { date: string; sets: { weight: number; reps: number }[] }
+    >();
+
+    for (const r of rows) {
+      const key = r.sessionId
+        ? `s-${r.sessionId}`
+        : r.createdAt.toISOString().slice(0, 10);
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          date: r.createdAt.toISOString().slice(0, 10),
+          sets: [],
+        });
+      }
+      grouped.get(key)!.sets.push({ weight: r.weight, reps: r.reps });
+    }
+
+    return Array.from(grouped.values()).map((g) => {
+      const maxWeight = Math.max(...g.sets.map((s) => s.weight));
+      const totalVolume = g.sets.reduce(
+        (acc, s) => acc + s.weight * s.reps,
+        0
+      );
+      return {
+        date: g.date,
+        maxWeight,
+        totalVolume: Math.round(totalVolume),
+        sets: g.sets.length,
+      };
+    });
+  }
 }
 
 export default new ExercisePerformanceService();

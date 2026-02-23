@@ -42,18 +42,19 @@ model Exercise {
 }
 
 model Routine {
-  id           Int                   @id @default(autoincrement())
-  name         String
-  description  String?
-  level        Level                 @default(Beginner)
-  duration     Int?
-  icon         String?
-  exercises    RoutineExercise[]
-  users        String[]              @default([])
-  sedeId       Int
-  sede         Sede                  @relation(fields: [sedeId], references: [id])
-  goals        Goal[]
-  performances ExercisePerformance[]
+  id              Int                   @id @default(autoincrement())
+  name            String
+  description     String?
+  level           Level                 @default(Beginner)
+  duration        Int?
+  icon            String?
+  exercises       RoutineExercise[]
+  users           String[]              @default([])
+  sedeId          Int
+  sede            Sede                  @relation(fields: [sedeId], references: [id])
+  goals           Goal[]
+  performances    ExercisePerformance[]
+  workoutSessions WorkoutSession[]
 }
 
 model RoutineExercise {
@@ -163,6 +164,27 @@ model PointEvent {
   sede Sede @relation(fields: [sedeId], references: [id])
 }
 
+enum SessionStatus {
+  COMPLETED
+  PARTIAL
+  NOT_DONE
+}
+
+model WorkoutSession {
+  id        Int           @id @default(autoincrement())
+  userId    String
+  routineId Int
+  status    SessionStatus @default(COMPLETED)
+  notes     String?
+  createdAt DateTime      @default(now())
+
+  routine      Routine               @relation(fields: [routineId], references: [id])
+  performances ExercisePerformance[]
+
+  @@index([userId])
+  @@index([userId, routineId])
+}
+
 model ExercisePerformance {
   id         Int      @id @default(autoincrement())
   userId     String
@@ -170,13 +192,18 @@ model ExercisePerformance {
   exerciseId Int
   weight     Float
   reps       Int
+  setNumber  Int      @default(1)
+  comment    String?
+  sessionId  Int?
   createdAt  DateTime @default(now())
 
-  routine  Routine? @relation(fields: [routineId], references: [id])
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  routine  Routine?        @relation(fields: [routineId], references: [id])
+  exercise Exercise        @relation(fields: [exerciseId], references: [id])
+  session  WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([userId, exerciseId])
   @@index([userId, routineId])
+  @@index([sessionId])
 }
 
 enum BadgeMetric {
