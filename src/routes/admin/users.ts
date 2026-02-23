@@ -4,6 +4,8 @@ import { asyncHandler } from "../../middleware/asyncHandler";
 import UserService from "../../services/user.service";
 import { ApiValidationError } from "../../services/api-validation-error";
 import ClassService from "../../services/class.service";
+import WorkoutSessionService from "../../services/workoutSession.service";
+import ExercisePerformanceService from "../../services/exercisePerformance.service";
 
 const router = Router();
 
@@ -75,6 +77,54 @@ router.get(
     } catch (error) {
       throw new ApiValidationError("Failed to fetch user classes", 500);
     }
+  })
+);
+
+router.get(
+  "/:userId/workout-sessions",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const routineId = req.query.routineId
+      ? Number(req.query.routineId)
+      : undefined;
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+
+    if (routineId !== undefined && Number.isNaN(routineId)) {
+      throw new ApiValidationError("Invalid routineId", 400);
+    }
+    if (Number.isNaN(page) || page < 1) {
+      throw new ApiValidationError("Invalid page", 400);
+    }
+    if (Number.isNaN(limit) || limit < 1) {
+      throw new ApiValidationError("Invalid limit", 400);
+    }
+
+    const sessions = await WorkoutSessionService.listByUser(userId, {
+      routineId,
+      page,
+      limit,
+    });
+
+    res.json(sessions);
+  })
+);
+
+router.get(
+  "/:userId/exercises/:id/progress",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { userId, id } = req.params;
+    const exerciseId = Number(id);
+    if (Number.isNaN(exerciseId)) {
+      throw new ApiValidationError("Invalid exerciseId", 400);
+    }
+
+    const progress = await ExercisePerformanceService.getProgressByExercise({
+      userId,
+      exerciseId,
+    });
+
+    res.json({ items: progress });
   })
 );
 
