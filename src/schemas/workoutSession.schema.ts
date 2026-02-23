@@ -13,7 +13,6 @@ const performanceInputSchema = z.object({
 
 export const createWorkoutSessionSchema = z.object({
   routineId: z.number().int().positive(),
-  status: z.enum(["COMPLETED", "PARTIAL", "NOT_DONE"]),
   notes: z.string().optional(),
   performances: z.array(performanceInputSchema),
 });

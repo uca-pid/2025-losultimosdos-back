@@ -13,7 +13,7 @@ type PerformanceInput = {
 type CreateSessionParams = {
   userId: string;
   routineId: number;
-  status: SessionStatus;
+  status?: SessionStatus;
   notes?: string;
   performances: PerformanceInput[];
 };
@@ -26,7 +26,7 @@ class WorkoutSessionService {
   }
 
   async create(params: CreateSessionParams) {
-    const { userId, routineId, status, notes, performances } = params;
+    const { userId, routineId, notes, performances } = params;
 
     const routine = await this.prisma.routine.findUnique({
       where: { id: routineId },
@@ -37,12 +37,57 @@ class WorkoutSessionService {
       throw new Error("Routine not found");
     }
 
+    const requiredSetsByExerciseId = routine.exercises.reduce(
+      (acc, routineExercise) => {
+        const requiredSets = Math.max(routineExercise.sets ?? 1, 1);
+        const current = acc.get(routineExercise.exerciseId) ?? 0;
+        acc.set(routineExercise.exerciseId, current + requiredSets);
+        return acc;
+      },
+      new Map<number, number>()
+    );
+
+    const loggedSetsByExerciseId = performances.reduce((acc, performance) => {
+      const current = acc.get(performance.exerciseId) ?? 0;
+      acc.set(performance.exerciseId, current + performance.sets.length);
+      return acc;
+    }, new Map<number, number>());
+
+    const totalRequiredSets = Array.from(requiredSetsByExerciseId.values()).reduce(
+      (sum, setCount) => sum + setCount,
+      0
+    );
+
+    const completedRequiredSets = Array.from(
+      requiredSetsByExerciseId.entries()
+    ).reduce((sum, [exerciseId, requiredSets]) => {
+      const loggedSets = loggedSetsByExerciseId.get(exerciseId) ?? 0;
+      return sum + Math.min(loggedSets, requiredSets);
+    }, 0);
+
+    const totalLoggedSets = Array.from(loggedSetsByExerciseId.values()).reduce(
+      (sum, setCount) => sum + setCount,
+      0
+    );
+
+    const completionRatio =
+      totalRequiredSets > 0
+        ? Math.min(completedRequiredSets / totalRequiredSets, 1)
+        : 0;
+
+    let sessionStatus: SessionStatus = "NOT_DONE";
+    if (totalRequiredSets > 0 && completedRequiredSets >= totalRequiredSets) {
+      sessionStatus = "COMPLETED";
+    } else if (totalLoggedSets > 0) {
+      sessionStatus = "PARTIAL";
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const session = await tx.workoutSession.create({
         data: {
           userId,
           routineId,
-          status,
+          status: sessionStatus,
           notes,
         },
       });
@@ -70,14 +115,10 @@ class WorkoutSessionService {
           .filter((p) => p.sets.length > 0)
           .map((p) => p.exerciseId)
       );
-      const completionRatio = Math.min(
-        completedExerciseIds.size / totalExercises,
-        1
-      );
 
       let pointsAwarded = 0;
 
-      if (status !== "NOT_DONE" && perfData.length > 0) {
+      if (sessionStatus !== "NOT_DONE" && perfData.length > 0) {
         const duration = routine.duration ?? 30;
         const basePointsPer10Min = 20;
         const baseByDuration = (duration / 10) * basePointsPer10Min;
