@@ -350,6 +350,7 @@ const main = async () => {
     await prisma.userBadge.deleteMany({});
     await prisma.pointEvent.deleteMany({});
     await prisma.exercisePerformance.deleteMany({});
+    await prisma.workoutSession.deleteMany({});
     await prisma.goal.deleteMany({});
     await prisma.routineExercise.deleteMany({});
     await prisma.class.deleteMany({});

@@ -13,6 +13,10 @@
     "test": "jest --runInBand --watchman=false",
     "seed": "ts-node prisma/seed.ts",
     "seed:mock": "ts-node prisma/seed-mock-data.ts",
+    "seed:delete-points": "ts-node prisma/seed-delete-points.ts",
+    "seed:challenges": "ts-node prisma/seed-challenges.ts",
+    "seed:badges": "ts-node prisma/seed-badges.ts",
+    "seed:all": "npm run seed:mock && npm run seed:delete-points && npm run seed:challenges && npm run seed:badges && npm run seed",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "docker:logs": "docker-compose logs -f"
